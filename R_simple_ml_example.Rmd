@@ -1,0 +1,202 @@
+---
+title: "Untitled"
+output: html_document
+date: '2022-07-16'
+---
+
+```{r setup, include=FALSE}
+library(readxl)
+library(dplyr)
+library(tidyverse)
+library(tidymodels)      # for the recipes package, along with the rest of tidymodels
+library(vip)
+library(skimr)           # for variable summaries
+library(rpart.plot)
+```
+
+```{r}
+
+# file location to read
+file <- "C:\\Users\\kelvi\\Desktop\\HMRC_Senior_Officials_Travel_July_to_September_2022.csv" 
+# load file
+file <- read_csv(file)
+
+# drop not needed columns
+file <- dplyr::select(file,-`Purpose of trip`,-`Total Cost of Use of Official Secure Car`,-`Other (including hospitality given)`)
+
+# remove any "Nil Return" from dates
+file <- file %>%
+  filter(`Start date of trip` !="Nil return")
+
+# for Class of travel replace Nil return with Standard
+file <- file %>%
+  mutate(`Class of travel`=ifelse(`Class of travel`=="Nil return","Standard",`Class of travel`))
+
+# for accommodation/meals() replace Nil return with 0 and make numeric
+file <- file %>%
+  mutate(`Accommodation/Meals ()`=ifelse(`Accommodation/Meals ()`=="Nil return","0",`Accommodation/Meals ()`))
+
+file$`Accommodation/Meals ()` <- as.numeric(file$`Accommodation/Meals ()`)
+
+file$`Duration of Visit (Days)` <- as.numeric(file$`Duration of Visit (Days)`)
+
+# make total cost numeric and rename column
+file <- rename(file,c('total cost'='Total cost, including all visas, accommodation, travel, meals etc. (£)'))
+file$`total cost` <- as.numeric(file$`total cost`)
+
+# make new column that has 'transport cost'
+file$`transport cost` <- file$`total cost` - file$`Accommodation/Meals ()`
+
+# change any NAs to 0
+file$`transport cost` <- replace_na(file$`transport cost`,0)
+
+file$`transport cost` <- as.numeric(file$`transport cost`)
+
+# make start date a date
+file$`Start date of trip` <- as.Date(file$`Start date of trip`,format = "%d/%m/%Y") # UK date format
+
+# to make things easier for machine learning, let's remove Mode of transport categories with multiple entries
+
+# first we need to find instances with commas
+file$`find_text` <- grepl(",",file$`Mode of transport`) # returns TRUE or FALSE
+
+# filter to only FALSE and drop the columns not needed for machine learning
+file <- file %>%
+  filter(`find_text`==FALSE)
+
+file <- select(file,-`find_text`, -`Accommodation/Meals ()`, -`total cost`, -`Senior Officials Name`)
+
+# now set the data up for machine learning
+
+# Fix the random numbers by setting the seed 
+# This enables the analysis to be reproducible when random numbers are used 
+set.seed(222)
+# Put 3/4 of the data into the training set 
+data_split <- initial_split(file, prop = 3/4)
+
+# Create data frames for the two sets:
+train_data <- training(data_split)
+train_data <- na.omit(train_data) # remove any NAs
+test_data  <- testing(data_split)
+
+# use a tidymodels recipe to predict the transport cost
+file_rec <- 
+  recipe(`transport cost` ~ ., data = train_data) %>% 
+  step_date(`Start date of trip`) %>%
+  step_rm(`Start date of trip`) %>%
+  step_dummy(all_nominal_predictors()) %>%
+  #step_dummy(all_nominal(), -all_outcomes()) %>% 
+  #step_impute_median(all_predictors()) %>%  
+  step_zv(all_predictors())%>% 
+  step_normalize(all_predictors())
+
+###### decision tree model #####
+tree_spec <- decision_tree() %>%
+  set_engine("rpart") %>%
+  set_mode("regression")
+
+tree_wflow <- 
+  workflow() %>% 
+  add_model(tree_spec) %>%
+  add_recipe(file_rec)
+
+#show hyperparameters
+extract_parameter_set_dials(file_rec)
+
+#val set - for candidate models
+val_set <- validation_split(file, prop = 0.80, strata = `transport cost`)
+
+#train_folds = vfold_cv(train_data, strata = `transport cost`)
+
+#create 25 candidate models
+set.seed(345)
+tree_res <- 
+  tree_wflow %>% 
+  tune_grid(#tree_wflow,
+            val_set,
+            #resamples = train_folds,
+            grid = 25,
+            #control = control_resamples(save_pred = TRUE),
+            control = control_grid(save_pred = TRUE),
+            metrics = metric_set(rmse))
+
+# show top 5 of 25 models
+tree_res %>% 
+  show_best(metric = "rmse")
+
+#select the best model
+tree_best <- 
+  tree_res %>% 
+  select_best(metric = "rmse")
+tree_best
+
+tree_res %>% 
+  collect_predictions()
+
+tree_auc1 <- 
+  tree_res %>% 
+  collect_predictions(parameters = tree_best)
+
+#### repeat for random forest model ############
+
+rfr_model <- 
+  rand_forest(mtry = tune(), min_n = tune(), trees = 1000) %>% 
+  #set_engine("ranger",num.threads=8) %>% 
+  #set_engine("randomForest") %>%
+  #set_mode("unknown")
+  #set_mode("classification")
+  set_mode("regression")
+
+# use a tidymodels recipe to predict the transport cost
+# random forest models do not need dummy values or normalised values
+file_rec1 <- 
+  recipe(`transport cost` ~ ., data = train_data) %>% 
+  step_date(`Start date of trip`) %>%
+  step_rm(`Start date of trip`) %>%
+  step_dummy(all_nominal_predictors()) %>%
+  #step_dummy(all_nominal(), -all_outcomes()) %>% 
+  step_impute_median(all_predictors()) %>%  
+  step_zv(all_predictors())%>% 
+  step_normalize(all_predictors())
+  
+rfr_wflow <- 
+  workflow() %>% 
+  add_model(rfr_model) %>%
+  add_recipe(file_rec1)
+
+#show hyperparameters
+extract_parameter_set_dials(file_rec1)
+
+#val set - for candidate models
+#val_set <- validation_split(file, prop = 0.80, strata = `transport cost`)
+
+extract_parameter_set_dials(rfr_model)
+
+#create 25 candidate models
+set.seed(345)
+rfr_res <- 
+  rfr_wflow %>% 
+  tune_grid(val_set,
+            grid = 25,
+            control = control_grid(save_pred = TRUE),
+            metrics = metric_set(rmse))
+
+# show top 5 of 25 models
+rfr_res %>% 
+  show_best(metric = "rmse")
+
+#select the best model
+rfr_best <- 
+  rfr_res %>% 
+  select_best(metric = "rmse")
+rfr_best
+
+rfr_res %>% 
+  collect_predictions()
+
+rfr_auc1 <- 
+  rfr_res %>% 
+  collect_predictions(parameters = rfr_best)
+
+
+```
