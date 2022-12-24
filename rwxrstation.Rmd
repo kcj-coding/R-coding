@@ -1,0 +1,137 @@
+---
+title: "rwxrstn"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+library(dplyr)
+library(ggplot2)
+library(reshape2)
+library(stringr)
+library(writexl)
+library(jsonlite) #for weather station data
+library(pracma) # for lat/long distance calculations using haverisne
+```
+
+```{r echo=FALSE}
+#lat/long of location to use
+melat<-52 # latitude
+melong<-00 # longitude
+
+
+# url
+url<-"https://apex.oracle.com/pls/apex/raspberrypi/weatherstation/getallstations"
+
+# urlwxr
+urlwxr<-"https://apex.oracle.com/pls/apex/raspberrypi/weatherstation/getlatestmeasurements/"
+
+# read in json data
+data<-fromJSON(url)
+
+data<-as.data.frame(data)
+
+# rename colnames
+colnames(data)<-c("Id","Name","Lat","Long")
+
+# remove where Long not numeric
+data<-data%>%
+  filter(is.numeric(Long))
+
+# define haversine function
+haversine1<-function(lat,lon,lat1,lon1) {
+ # convert degrees to radians
+  lon=deg2rad(lon)
+  lat=deg2rad(lat)
+  lon1=deg2rad(lon1)
+  lat1=deg2rad(lat1)
+  
+  # haversine formula
+  dlon=lon1-lon
+  dlat=lat1-lat
+  a=sin(dlat/2)**2+cos(lat)*cos(lat1)*sin(dlon/2)**2
+  c=2*asin(sqrt(a))
+  r=6371 # radius of Earth in km
+  return(c*r)
+  
+}
+
+# create new column with data from latme,longme
+data <- data %>%
+  #mutate(latlong=(paste(Lat,"N",",",Long,"W",sep="")))# %>%
+  mutate(dis=haversine1(melat,melong,Lat,Long))
+
+# to get weather data we need to append the station id to the urlwxr
+# set a condition e.g. only locations within 50km
+
+datatouse<-data %>%
+  filter(dis<=50)
+
+lst<-unique(datatouse$Id)
+
+# initialise data3
+data3 <- data.frame(StationId=integer(),
+                 AmbT=numeric(),
+                 GndT=numeric(),
+                 AirQ=numeric(),
+                 AirP=numeric(),
+                 Hmd=numeric(),
+                 WndS=integer(),
+                 WGS=integer(),
+                # Lat=numeric(),
+                # Long=numeric(),
+                 stringsAsFactors=FALSE)
+
+for (i in lst) {
+ urlwxr1<-paste(urlwxr,i,sep="")
+ 
+ # read in json data
+data1<-fromJSON(urlwxr1)
+
+data1<-as.data.frame(data1)
+
+# check if not empty then
+if (!is.null(data1$`items.weather_stn_id`)){
+
+# take metrics from data1 and make a new table data3
+t<-colnames(data1)
+ 
+data2<-select(data1,`items.weather_stn_id`,`items.ambient_temp`,`items.ground_temp`,`items.air_quality`,`items.air_pressure`,`items.humidity`,`items.wind_speed`,`items.wind_gust_speed`)
+
+data3<-rbind(data3,data2)
+
+#colnames(data3)<-c("Station Id","Ambient temp","Ground temp","Air quality","Air pressure","Humidity","Wind speed","Wind gust speed")
+
+}}
+
+# join lat long onto data3
+datatoadd<-select(datatouse,Id,Lat,Long)
+data3<-left_join(data3,datatoadd,by=c("items.weather_stn_id"="Id"))
+
+t1 <- data.frame(num=character())
+
+# add text filter to distinguish between stations
+for (i in 1:nrow(data3)){
+  t=paste(i,"stn",sep="")
+  t1<-rbind(t1,t)
+  
+}
+
+# join name to data3
+data3<-cbind(data3,t1)
+
+cols <- c("items.ambient_temp","items.air_pressure","items.humidity")
+
+# graph data3
+for (coler in cols){
+  type <- ensym(coler)
+  ggplot(data3,aes(x=X.1stn.,y=!!type))+
+  geom_col(fill = "#CD2456")+
+  geom_text(aes(label=round(!!type,0),vjust=-0.5))+
+  theme_classic()
+  
+  #save graph
+  #ggsave(path="C:\\Users\\kelvi\\Desktop\\",paste(coler,".png",sep=""),height=15,width=30,units="cm")
+
+}
+
+```
