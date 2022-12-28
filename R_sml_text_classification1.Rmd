@@ -1,0 +1,107 @@
+---
+title: "sml-text-classification-example"
+output: html_document
+---
+
+``` {r, setup}
+library(tidyverse)
+library(dplyr)
+library(tm)
+library(tidytext)
+library(readxl)
+library(ggplot2)
+library(tidymodels)
+library(textrecipes)
+#library(wordcloud2)
+#library(grepl)
+#library(rJava)
+#library(RWeka)
+```
+
+```{r, echo=FALSE}
+# data obtained from https://www.consumerfinance.gov/data-research/consumer-complaints/
+# load the data
+mydata <-read_csv("C:\\Users\\kelvi\\Desktop\\complaints.csv")
+
+#mycorpus <- Corpus(VectorSource(mydata[1]))
+
+# we will use the consumer complaints narrative as the text and the Product as the category to predict
+
+# filter the dates to years 2019
+mydata <- mydata %>%
+  filter(`Date received` >= as.Date("2019-01-01")) %>%
+  filter(`Date received` <= as.Date("2019-12-31"))
+
+# select just the columns interested in
+mydata <- dplyr::select(mydata,Product, `Consumer complaint narrative`)
+
+# filter out blanks
+mydata <- mydata %>%
+  filter(!is.na(`Consumer complaint narrative`) | `Consumer complaint narrative` != "")
+
+# we'll restrict Product to 2 options
+mydata <- mydata %>%
+  mutate(Product = factor(if_else(
+    Product == paste("Credit reporting, credit repair services,",
+                     "or other personal consumer reports"),
+    "Credit", "Other"
+  )))
+
+# convert Product to factor
+#mydata$Product <- factor(mydata$Product)
+
+# split the data
+data_split <- initial_split(mydata, strata=Product)
+
+data_split_train <- training(data_split)
+data_split_test <- testing(data_split)
+
+# make a recipe
+data_rec <- recipe(Product ~ `Consumer complaint narrative`, data = data_split_train)
+
+# textify the recipe
+data_rec <- data_rec %>%
+  step_tokenize(`Consumer complaint narrative`) %>%
+  step_tokenfilter(`Consumer complaint narrative`, max_tokens = 1e3) %>%
+  step_tfidf(`Consumer complaint narrative`)
+
+# make a workflow
+data_wf <- workflow() %>%
+  add_recipe(data_rec)
+
+# use a lasso reg model
+lasso_spec <- logistic_reg(penalty = 0.01, mixture = 1) %>%
+  set_mode("classification") %>%
+  set_engine("glmnet")
+
+# train the data
+lasso_fit <- data_wf %>%
+  add_model(lasso_spec) %>%
+  fit(data = data_split_train)
+
+# let's check how well it has performed
+
+# make 10 cross-validation resamples
+set.seed(234)
+mydata_folds <- vfold_cv(data_split_train)
+
+#resampling estimates workflow
+mydata_wf <- workflow() %>%
+  add_recipe(data_rec) %>%
+  add_model(lasso_spec)
+
+# fit and store the resamples
+mydata_rs <- fit_resamples(
+  mydata_wf,
+  mydata_folds,
+  control = control_resamples(save_pred = TRUE)
+)
+
+# estimate their performance
+lasso_met <- collect_metrics(mydata_rs)
+lasso_acc <- collect_predictions(mydata_rs)
+
+# create a confusion matrix to display the results
+conf_mat_resampled(mydata_rs, tidy = FALSE) %>%
+  autoplot(type = "heatmap")
+```
