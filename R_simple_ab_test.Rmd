@@ -1,0 +1,66 @@
+---
+title: "AB Testing"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+library(ggplot2)
+library(plyr)
+library(readxl)
+library(tidyverse)
+library(openxlsx)
+library(dplyr)
+#library(ggrepel)
+#library(gridExtra)
+#library(ggtext)
+library(forecast)
+```
+
+# load the data
+```{r echo=FALSE}
+
+#file location to read
+#file <- "C:\\Users\\kelvi\\Desktop\\SGA\\Excel file\\2_hr_Project.xlsx"
+output_folder <- "C:\\Users\\kelvi\\Desktop\\"
+output_folder_excel <- "C:\\Users\\kelvi\\Desktop\\"
+
+#create a dataset
+data <- data.frame(Product=c("A_promo","A_std"),Number=c(300,200),Extra=c(400,300))
+
+#Compare the performance of Number to Extra
+#Hypothesis to test: Extra is better performing than Number, for promo versus std
+x <- data$Number
+n <- data$Extra
+ 
+proa<-prop.test(x,n, correct = FALSE)
+proa
+proa <- list(proa)
+proa <- as.data.frame(matrix(unlist(proa),nrow=length(proa),byrow=TRUE))
+colnames(proa) <- c("X-squared","df","p-value","prop 1","prop 2","95pct conf int1","95pct conf int2","hypothesis","test name","vectors")
+
+
+########## graph the p-value ##########################
+graph <- rbind(proa$`p-value`)
+graph <- as.data.frame(as.numeric(graph))
+colnames(graph) <- c("p-value")
+graph$xaxis <- c("Extra compared to Number")
+
+ggplot(graph,aes(x=xaxis,y=`p-value`))+
+  geom_bar(aes(fill=xaxis),position="dodge",stat="identity")+
+   geom_text(aes(label=round(`p-value`,2)),vjust=-1.0,size=2.5)+
+   scale_fill_manual(values=alpha(c("#CD2456","#14022E","#CD1234")))+
+   #ylim(0,max(graph$`p-value`)+1)+
+   theme_classic(base_size=8)+
+   theme(legend.position = "none")+
+   labs(x="AB Test",y="P-value",title="P-value for AB test")
+  ggsave(paste(output_folder,"p-value.png",sep=""),width=11.2,height=12.3,units="cm")
+
+####### create xlsx of this ab test data #########################
+wb <- createWorkbook()
+addWorksheet(wb, "E_compar_Num")
+
+writeData(wb,"E_compar_Num",proa,startRow=1,startCol=1)
+
+saveWorkbook(wb,file=paste(output_folder_excel,"AB_test_results.xlsx",sep=""),overwrite=TRUE)
+
+```
