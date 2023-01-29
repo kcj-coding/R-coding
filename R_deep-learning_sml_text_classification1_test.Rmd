@@ -1,0 +1,208 @@
+---
+title: "deep-learning-sml-text-classification-example"
+output: html_document
+---
+
+``` {r, setup}
+library(tidyverse)
+library(dplyr)
+library(tm)
+library(tidytext)
+library(readxl)
+library(ggplot2)
+library(tidymodels)
+library(textrecipes)
+library(keras)
+#library(tensorflow)
+#install_tensorflow() # for first run if not installed
+#library(wordcloud2)
+#library(grepl)
+#library(rJava)
+#library(RWeka)
+```
+
+```{r, echo=FALSE}
+# data obtained from https://www.consumerfinance.gov/data-research/consumer-complaints/
+
+# load the data
+mydata <-read_csv("C:\\Users\\kelvi\\Desktop\\complaints.csv")
+
+#mycorpus <- Corpus(VectorSource(mydata[1]))
+
+# we will use the consumer complaints narrative as the text and the Product as the category to predict
+
+# filter the dates to years 2019
+mydata <- mydata %>%
+  filter(`Date received` >= as.Date("2019-12-01")) %>%
+  filter(`Date received` <= as.Date("2019-12-31"))
+
+# select just the columns interested in
+mydata <- dplyr::select(mydata,Product, `Consumer complaint narrative`)
+
+# filter out blanks
+mydata <- mydata %>%
+  filter(!is.na(`Consumer complaint narrative`) | `Consumer complaint narrative` != "")
+
+# we'll restrict Product to 2 numeric options, 0 and 1 for the ltsm model
+mydata <- mydata %>%
+  mutate(Product = as.numeric(if_else(
+    Product == paste("Credit reporting, credit repair services,",
+                     "or other personal consumer reports"),
+    0, 1
+  )))
+
+# graph of characters per complaint
+mydata <- mydata %>%
+  mutate(nchars=nchar(`Consumer complaint narrative`)) %>%
+  filter(nchars <= 5000)
+
+
+mydata %>%
+  ggplot(aes(nchar(`Consumer complaint narrative`))) +
+  geom_histogram(binwidth = 1, alpha = 0.8) +
+  labs(x = "Number of characters per complaint",
+       y = "Number of complaints")
+
+mydata <- dplyr::select(mydata,-nchars)
+
+# graph of words per complaint
+mydata <- mydata %>%
+  mutate(nwords = tokenizers::count_words(`Consumer complaint narrative`)) %>%
+  filter(nwords <= 5000)
+
+
+mydata %>%
+  ggplot(aes(nwords)) +
+  geom_bar() +
+  labs(x = "Number of words per complaint",
+       y = "Number of complaints")
+
+mydata <- dplyr::select(mydata,-nwords)
+
+# convert Product to numeric
+#mydata$Product <- as.numeric(mydata$Product)
+
+# split the data
+data_split <- initial_split(mydata, strata=Product)
+
+data_split_train <- training(data_split)
+data_split_test <- testing(data_split)
+
+# 
+max_words <- 150 # words included in vocabulary y-axis on words graph
+max_length <- 250 # sequence length x-axis on words graph
+
+data_rec <- recipe(~ `Consumer complaint narrative`, data = data_split_train) %>%
+  step_tokenize(`Consumer complaint narrative`) %>%
+  step_tokenfilter(`Consumer complaint narrative`, max_tokens = max_words) %>%
+  step_sequence_onehot(`Consumer complaint narrative`, sequence_length = max_length)
+
+data_prep <- prep(data_rec)
+data_train <- bake(data_prep, new_data = NULL, composition = "matrix")
+
+# build lstm, long short-term memory model - specific kind of RNN (recurrent neural network)
+lstm_mod <- keras_model_sequential() %>%
+  layer_embedding(input_dim = max_words + 1, output_dim = 32) %>%
+  layer_lstm(units = 32) %>%
+  layer_dense(units = 1, activation = "sigmoid") # output between 0 and 1, hence target needed as 0 or 1
+
+lstm_mod
+
+# compile model
+lstm_mod %>%
+  compile(
+    optimizer = "adam",
+    loss = "binary_crossentropy",
+    metrics = c("accuracy")
+  )
+
+# fit model
+lstm_history <- lstm_mod %>%
+  fit(
+    data_train,
+    data_split_train$Product,
+    epochs = 10,
+    validation_split = 0.25,
+    batch_size = 512,
+    verbose = FALSE
+  )
+
+lstm_history
+
+plot(lstm_history) # graphical representation of performance over the epochs
+
+# model evaluation - use on validation data and get performance results in more familiar ways
+
+set.seed(234)
+data_val <- validation_split(data_split_train, strata = Product)
+data_val
+
+# we can access the test and train data of the validation dataset below
+data_analysis <- bake(data_prep, new_data = analysis(data_val$splits[[1]]),
+                      composition = "matrix")
+dim(data_analysis)
+
+data_assess <- bake(data_prep, new_data = assessment(data_val$splits[[1]]),
+                    composition = "matrix")
+dim(data_assess)
+
+# we also need to get the outcome variables for each of these datasets
+state_analysis <- analysis(data_val$splits[[1]]) %>% pull(Product)
+state_assess <- assessment(data_val$splits[[1]]) %>% pull(Product)
+
+# build a long short-term memory model based on this data
+lstm_mod <- keras_model_sequential() %>%
+  layer_embedding(input_dim = max_words + 1, output_dim = 32) %>%
+  layer_lstm(units = 32, dropout = 0.4, recurrent_dropout = 0.4) %>%
+  layer_dense(units = 1, activation = "sigmoid") # to fit and predict class probabilities
+
+# configure the model for training with a specific optimizer and set of metrics
+lstm_mod %>%
+  compile(
+    optimizer = "adam",
+    loss = "binary_crossentropy",
+    metrics = c("accuracy")
+  )
+
+# fit the model
+val_history <- lstm_mod %>%
+  fit(
+    data_analysis,
+    state_analysis,
+    epochs = 10,
+    validation_data = list(data_assess, state_assess),
+    batch_size = 512,
+    verbose = FALSE
+  )
+
+val_history
+
+# visualise how it performed over the epochs
+plot(val_history)
+
+# create keras_predict function
+keras_predict <- function(model, baked_data, response) {
+  predictions <- predict(model, baked_data)[, 1]
+  tibble(
+    .pred_1 = predictions,
+    .pred_class = if_else(.pred_1 < 0.5, 0, 1),
+    state = response
+  ) %>%
+    mutate(across(c(state, .pred_class),            # create factors
+                  ~ factor(.x, levels = c(1, 0))))  # with matching levels
+}
+
+# get the predicted values
+val_res <- keras_predict(lstm_mod, data_assess, state_assess)
+val_res %>% metrics(state, .pred_class, .pred_1) # state is Product
+
+# plot the roc curve
+val_res %>%
+  roc_curve(state, .pred_1) %>%
+  autoplot()
+
+# get a confusion matrix
+val_res %>%
+  conf_mat(state, .pred_class) %>%
+  autoplot(type = "heatmap")
+```
