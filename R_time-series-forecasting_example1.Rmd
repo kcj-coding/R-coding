@@ -1,0 +1,163 @@
+---
+title: "Time-series forecasting example"
+output: html_document
+date: "2023-02-08"
+---
+# Load required libraries
+``` {r, setup, message=FALSE}
+library(tidyverse)
+library(dplyr)
+library(readxl)
+library(openxlsx)
+library(ggplot2)
+library(forecast)
+library(data.table)
+
+```
+
+# Objective 1 
+
+```{r, echo=FALSE}
+ # set file output locations
+output_folder <- "C:\\Users\\kelvi\\Desktop\\"
+output_folder_excel = "C:\\Users\\kelvi\\Desktop\\"
+
+######################## read in and load the data ######################################################
+
+file <- "C:\\Users\\kelvi\\Desktop\\egkk_passengers1.xlsx"
+
+# load the file
+df <- read_excel(file)
+```
+# forecast future values 
+```{r, echo=FALSE}
+# model configurations for time series forecasting
+freqtouse = 1 #1 = annual, 4 = quarterly, 7 = daily,
+data_interval <- 1 #interval for predictions
+data_increment <- 1 #increment of predictions
+future_time_est <- 1 # for months e.g 1 * 12 below = 12 either year or months depending on how data is specified
+future_time_interval <- 25 # 25 years
+valtouse <- 1 # first time series value to use
+colnbr <- 2 # column number with ts in e.g column A
+
+#get data of interest
+data_to_use <- df[colnbr]
+
+#make column ts
+data_to_use_ts <- ts(data_to_use,freq=freqtouse,start=c(valtouse,data_interval))
+
+mymodel <- auto.arima(data_to_use_ts)
+
+#plot for next 25 years
+#myforecast <- forecast(mymodel, level=c(95), h=future_time_est*future_time_interval)
+myforecast <- forecast(mymodel, h=future_time_est*future_time_interval)
+
+#get data into dataframe and ggplot format
+myforecastdata <- data.frame(myforecast)
+
+t <- data.frame(myforecastdata)
+names(t)[names(t) == 'Point.Forecast'] <- c("Passengers")
+
+#append "values" and "predicted" to the data before joining
+#add Lo.95 and Hi.95 95% area of predicted values to fall within, point.forecast = average of 95% and 80%
+data_to_use$Type="Values"
+data_to_use$Lo.95=0
+data_to_use$Hi.95=0
+data_to_use$Lo.80=0
+data_to_use$Hi.80=0
+
+#filter for last value, and lo.95 and hi.95
+#last value
+data_to_use$labeltxt = if_else(data_to_use$Passengers == last(data_to_use$Passengers), as.character(round(last(data_to_use$Passengers),0)),NA_character_)
+
+t$labeltxt = if_else(t$Passengers == last(t$Passengers), as.character(round(last(t$Passengers),0)), NA_character_)
+
+#lo.95 and lo.80
+data_to_use$labeltxtl95 = NA_character_
+t$labeltxtl95 = if_else(t$Lo.95 == last(t$Lo.95), as.character(round(last(t$Lo.95),0)), NA_character_)
+
+data_to_use$labeltxtl80 = NA_character_
+t$labeltxtl80 = if_else(t$Lo.80 == last(t$Lo.80), as.character(round(last(t$Lo.80),0)), NA_character_)
+
+#hi.95 and hi.80
+data_to_use$labeltxth95 = NA_character_
+t$labeltxth95 = if_else(t$Hi.95 == last(t$Hi.95), as.character(round(last(t$Hi.95),0)), NA_character_)
+
+data_to_use$labeltxth80 = NA_character_
+t$labeltxth80 = if_else(t$Hi.80 == last(t$Hi.80), as.character(round(last(t$Hi.80),0)), NA_character_)
+t$Type="Predicted"
+
+#add these to df
+mydf1 <- rbind(data_to_use,t)
+
+#ggplot these
+fut1 <- ggplot(mydf1,aes(x=1:nrow(mydf1),y=Passengers))+
+  geom_line(aes(color=Type))+
+  geom_ribbon(aes(ymin=Lo.95,ymax=Hi.95),alpha=.25, fill="#052C74")+
+  geom_ribbon(aes(ymin=Lo.80,ymax=Hi.80),alpha=.25, fill="#0757E6")+
+  geom_text(aes(label=labeltxt),vjust=-0.5,size=2.5)+
+  geom_text(aes(y=Lo.95,label=labeltxtl95),vjust=-0.5,size=2.5)+
+  geom_text(aes(y=Hi.95,label=labeltxth95),vjust=-0.5,size=2.5)+
+  scale_color_manual(values=c("#CD2456","#336EFF"))+
+  ylim(0,max(mydf1$Hi.95)+5)+
+  theme_classic(base_size=8)+
+  labs(x="Players",y="Site visits in a week",title="Arima Model - Dark blue = 80% confidence region, lighter = 95% - Promo B on product B - site visits", subtitle="Combined linear combination of past values and forecast errors, for predicted Promo B product B performance if applied to 54 players in total")
+
+
+fut1a <- ggplot(mydf1,aes(x=1:nrow(mydf1),y=Passengers))+
+  geom_line(aes(color=Type))+
+  geom_ribbon(aes(ymin=Lo.95,ymax=Hi.95),alpha=.25, fill="#052C74")+
+  geom_ribbon(aes(ymin=Lo.80,ymax=Hi.80),alpha=.25, fill="#0757E6")+
+  geom_text(aes(label=labeltxt),vjust=-0.5,size=2)+
+  geom_text(aes(y=Lo.95,label=labeltxtl95),vjust=-0.5,size=2)+
+  geom_text(aes(y=Hi.95,label=labeltxth95),vjust=-0.5,size=2)+
+  scale_color_manual(values=c("#CD2456","#336EFF"))+
+  theme_classic(base_size=8)+
+  labs(x="Year",y="Passengers",title="Arima Model - Dark blue = 80% confidence region, lighter = 95% - Promo B on product B - site visits", subtitle="")
+ggsave(paste(output_folder,"filearima.png",sep=""),width=23,height=12,units="cm")
+
+#drop labeltxt from dataframes
+mydf1 <- dplyr::select(mydf1, -labeltxt,-labeltxtl95,-labeltxth95,-labeltxtl80,-labeltxth80)
+
+#add new columns showing the cumulative percentage increases overall and individual for sales
+mydf1 <- mydf1 %>%
+  mutate(ratiodiff=with(mydf1,c(Passengers[1],Passengers[-1]/Passengers[-nrow(mydf1)]))) %>%
+  mutate(ratiocdiff=cumsum(ratiodiff))
+
+#graph these
+fut1i <- ggplot(mydf1,aes(x=1:nrow(mydf1),y=ratiodiff))+
+  geom_line(aes(color=Type))+
+  #geom_text(aes(label=round(ratiodiff,1)),vjust=-0.5)+
+  scale_color_manual(values=c("#CD2456","#336EFF"))+
+  theme_classic()+
+  labs(x="Year",y="Ratio",title="Arima Ratio change for Passengers")
+ggsave("filearimaratio.png",width=30,height=15,units="cm")
+
+fut1ii <- ggplot(mydf1,aes(x=1:nrow(mydf1),y=ratiocdiff))+
+  geom_line(aes(color=Type))+
+  #geom_text(aes(label=round(ratiocdiff,1)),vjust=-0.5)+
+  scale_color_manual(values=c("#CD2456","#336EFF"))+
+  theme_classic()+
+  labs(x="Year",y="Ratio",title="Arima Cumulative Ratio change for Passengers")
+ggsave("filearimaratioc.png",width=30,height=15,units="cm")
+
+
+#write xlsx of data
+wb <- createWorkbook()
+addWorksheet(wb, "Arima")
+addWorksheet(wb, "Arimaplt")
+addWorksheet(wb, "Arimapltratio")
+addWorksheet(wb, "Arimapltratioc")
+
+insertImage(wb, "Arimaplt", paste(output_folder,"filearima.png",sep=""), width=23, height=12, units="cm")
+insertImage(wb, "Arimapltratio", "filearimaratio.png", width=30, height=15, units="cm")
+insertImage(wb, "Arimapltratioc", "filearimaratioc.png", width=30, height=15, units="cm")
+
+writeData(wb,"Arima",`mydf1`,startRow=1,startCol=1)
+
+saveWorkbook(wb,file=paste(output_folder_excel,"passenger_forecasts_egkk.xlsx",sep=""),overwrite=TRUE)
+
+unlink(paste(output_folder,"filearima.png",sep=""))
+unlink("filearimaratio.png")
+unlink("filearimaratioc.png")
+```
