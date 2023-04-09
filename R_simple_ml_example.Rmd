@@ -141,6 +141,7 @@ tree_auc1 <-
 
 rfr_model <- 
   rand_forest(mtry = tune(), min_n = tune(), trees = 1000) %>% 
+  set_engine("ranger",  importance = "impurity") %>% # for importance plot this line is needed
   #set_engine("ranger",num.threads=8) %>% 
   #set_engine("randomForest") %>%
   #set_mode("unknown")
@@ -198,5 +199,24 @@ rfr_auc1 <-
   rfr_res %>% 
   collect_predictions(parameters = rfr_best)
 
+# finalise the model for fitting
+final_mlp_wflow <- rfr_wflow %>%
+  finalize_workflow(rfr_best)
+
+final_mlp_fit <- final_mlp_wflow %>%
+  fit(test_data)
+
+feeder_vip <-
+  extract_fit_parsnip(final_mlp_fit) %>% 
+  vip()
+feeder_vip
+
+### or
+
+#feeder_vip <-
+#  extract_fit_engine(final_mlp_fit) %>%
+#  vi()
+
+# view the data
 
 ```
