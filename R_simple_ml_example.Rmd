@@ -52,6 +52,13 @@ file$`transport cost` <- replace_na(file$`transport cost`,0)
 
 file$`transport cost` <- as.numeric(file$`transport cost`)
 
+# filter to cost > 0
+file <- file %>%
+  filter(`transport cost` > 0) %>%
+  #filter(`Mode of transport` != "Nil Return") %>%
+  filter (`Mode of transport` == "Rail" | `Mode of transport` == "Car") #%>%
+  #filter(`Class of travel` == 'Standard')
+
 # make start date a date
 file$`Start date of trip` <- as.Date(file$`Start date of trip`,format = "%d/%m/%Y") # UK date format
 
@@ -72,7 +79,7 @@ file <- select(file,-`find_text`, -`Accommodation/Meals ()`, -`total cost`, -`Se
 # This enables the analysis to be reproducible when random numbers are used 
 set.seed(222)
 # Put 3/4 of the data into the training set 
-data_split <- initial_split(file, prop = 3/4)
+data_split <- initial_split(file, prop = 0.7)
 
 # Create data frames for the two sets:
 train_data <- training(data_split)
@@ -84,11 +91,13 @@ file_rec <-
   recipe(`transport cost` ~ ., data = train_data) %>% 
   step_date(`Start date of trip`) %>%
   step_rm(`Start date of trip`) %>%
-  step_dummy(all_nominal_predictors()) %>%
+  step_other(Destination, threshold = 0.01) %>% # remove destination values that occur <1% of the time
+  step_dummy(all_nominal_predictors()) %>% # change categorical values to numeric
   #step_dummy(all_nominal(), -all_outcomes()) %>% 
   #step_impute_median(all_predictors()) %>%  
-  step_zv(all_predictors())%>% 
-  step_normalize(all_predictors())
+  step_zv(all_predictors())%>% # remove columns with a single value
+  #step_nzv(all_numeric_predictors()) %>% # remove columns with a single value
+  step_normalize(all_predictors()) # centre and scale
 
 ###### decision tree model #####
 tree_spec <- decision_tree() %>%
@@ -104,15 +113,14 @@ tree_wflow <-
 extract_parameter_set_dials(file_rec)
 
 #val set - for candidate models
-val_set <- validation_split(file, prop = 0.80, strata = `transport cost`)
+val_set <- validation_split(file, prop = 0.50, strata = `transport cost`)
 
 #train_folds = vfold_cv(train_data, strata = `transport cost`)
 
 #create 25 candidate models
-set.seed(345)
+set.seed(22)
 tree_res <- 
-  tree_wflow %>% 
-  tune_grid(#tree_wflow,
+  tune_grid(tree_wflow,
             val_set,
             #resamples = train_folds,
             grid = 25,
@@ -137,10 +145,55 @@ tree_auc1 <-
   tree_res %>% 
   collect_predictions(parameters = tree_best)
 
+# finalise the model for fitting
+final_mlp_wflow <- tree_wflow %>%
+  finalize_workflow(tree_best)
+
+final_mlp_fit <- final_mlp_wflow %>%
+  fit(train_data) # fit on train_data
+
+feeder_vip <-
+  extract_fit_parsnip(final_mlp_fit) %>% 
+  vip()
+feeder_vip
+
+### or
+
+#feeder_vip <-
+#  extract_fit_engine(final_mlp_fit) %>%
+#  vi()
+
+# view the predicted data
+predict(final_mlp_fit, train_data) # predict on new, test or train data
+
+flights_aug <- 
+  augment(final_mlp_fit, train_data)
+
+# graph of test predictions vs actual data: 
+#create line graph
+ggplot(flights_aug,aes(x=`.pred`,y=`transport cost`))+
+geom_point(color="#CD2456")+
+#scale_x_date(date_labels="%d/%m/%Y",date_breaks="1 week")+ #can be 1 day, 1 week, 1 month
+#geom_text(data=filter(df,`yvalue`==last(`yvalue`)), aes(label=round(`yvalue`,0)),vjust=-0.5)+
+#scale_color_manual(values=alpha(c("#CD2456","14022E")),name="xyz")+
+#geom_point(aes(shape=`column`))+
+#geom_vline(aes(xintercept=as.numeric(Date[c(90)])))+
+#geom_vline(aes(xintercept=as.integer(as.POSIXct("2020-05-05"))),linetype=4)+
+theme_classic()+
+#ylim(0,max((`yaxis`)+5))+
+#facet_grid(~col)+
+#coord_flip()+
+xlim(0,max(flights_aug$.pred,flights_aug$`transport cost`))+
+ylim(0,max(flights_aug$.pred,flights_aug$`transport cost`))+
+geom_abline(slope = 1, intercept = 0, color="#CD2456", linetype="dashed")+
+theme(legend.position="none")+
+theme(axis.text.x=element_text(angle=0,size=10))+
+labs(x="Train",y="Test",title="Real vs predicted data on Train dataset")
+
 #### repeat for random forest model ############
 
 rfr_model <- 
-  rand_forest(mtry = tune(), min_n = tune(), trees = 1000) %>% 
+  rand_forest(mtry = tune(), min_n = tune(), trees = 10000) %>% 
   set_engine("ranger",  importance = "impurity") %>% # for importance plot this line is needed
   #set_engine("ranger",num.threads=8) %>% 
   #set_engine("randomForest") %>%
@@ -154,11 +207,13 @@ file_rec1 <-
   recipe(`transport cost` ~ ., data = train_data) %>% 
   step_date(`Start date of trip`) %>%
   step_rm(`Start date of trip`) %>%
-  step_dummy(all_nominal_predictors()) %>%
+  step_other(Destination, threshold = 0.01) %>% # remove destination values that occur <1% of the time
+  step_dummy(all_nominal_predictors()) %>% # change categorical values to numeric
   #step_dummy(all_nominal(), -all_outcomes()) %>% 
-  step_impute_median(all_predictors()) %>%  
-  step_zv(all_predictors())%>% 
-  step_normalize(all_predictors())
+  step_impute_median(all_predictors()) %>%  # impute missing values with median values
+  step_zv(all_predictors())%>% # remove columns with a single value
+  #step_nzv(all_numeric_predictors()) %>% # remove columns with a single value
+  step_normalize(all_predictors()) # centre and scale
   
 rfr_wflow <- 
   workflow() %>% 
@@ -174,7 +229,7 @@ extract_parameter_set_dials(file_rec1)
 extract_parameter_set_dials(rfr_model)
 
 #create 25 candidate models
-set.seed(345)
+set.seed(22)
 rfr_res <- 
   rfr_wflow %>% 
   tune_grid(val_set,
@@ -199,24 +254,63 @@ rfr_auc1 <-
   rfr_res %>% 
   collect_predictions(parameters = rfr_best)
 
+# get metrics
+#rfr_met <- rfr_best %>%
+#  collect_metrics()
+
 # finalise the model for fitting
 final_mlp_wflow <- rfr_wflow %>%
   finalize_workflow(rfr_best)
 
 final_mlp_fit <- final_mlp_wflow %>%
-  fit(test_data)
+  fit(train_data) # fit on train_data
 
 feeder_vip <-
   extract_fit_parsnip(final_mlp_fit) %>% 
   vip()
 feeder_vip
 
-### or
+### or as a table
 
-#feeder_vip <-
-#  extract_fit_engine(final_mlp_fit) %>%
-#  vi()
+feeder_vip <-
+  extract_fit_engine(final_mlp_fit) %>%
+  vi()
 
-# view the data
+# graph this
+feeder_vip[1:10,] %>%
+  ggplot(aes(Importance, fct_reorder(Variable, Importance))) + 
+  geom_col(fill="#CD2456") +
+  labs(y = NULL, title = "Top 10 feature importances") +
+  theme(legend.position = "none")+
+  theme_classic()
+
+feeder_vip
+
+# view the predicted data
+predict(final_mlp_fit, train_data) # predict on new, test or train data
+
+flights_aug <- 
+  augment(final_mlp_fit, train_data)
+
+# graph of test predictions vs actual data: 
+#create line graph
+ggplot(flights_aug,aes(x=`.pred`,y=`transport cost`))+
+geom_point(color="#CD2456")+
+#scale_x_date(date_labels="%d/%m/%Y",date_breaks="1 week")+ #can be 1 day, 1 week, 1 month
+#geom_text(data=filter(df,`yvalue`==last(`yvalue`)), aes(label=round(`yvalue`,0)),vjust=-0.5)+
+#scale_color_manual(values=alpha(c("#CD2456","14022E")),name="xyz")+
+#geom_point(aes(shape=`column`))+
+#geom_vline(aes(xintercept=as.numeric(Date[c(90)])))+
+#geom_vline(aes(xintercept=as.integer(as.POSIXct("2020-05-05"))),linetype=4)+
+theme_classic()+
+#ylim(0,max((`yaxis`)+5))+
+#facet_grid(~col)+
+#coord_flip()+
+xlim(0,max(flights_aug$.pred,flights_aug$`transport cost`))+
+ylim(0,max(flights_aug$.pred,flights_aug$`transport cost`))+
+geom_abline(slope = 1, intercept = 0, color="#CD2456", linetype="dashed")+
+theme(legend.position="none")+
+theme(axis.text.x=element_text(angle=0,size=10))+
+labs(x="Train",y="Test",title="Real vs predicted data on Train dataset")
 
 ```
