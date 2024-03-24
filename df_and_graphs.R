@@ -7,6 +7,13 @@ typer <- c("a","b","a","b","a","b","a","b","a","b")
 # make a dataframe
 df <- data.frame(data=data, type=typer)
 
+# get summary
+df_summary = as.data.frame(summary(df))
+
+# histogram of numeric values
+df_hist <- df[, sapply(df, class) == 'numeric']
+hist(unlist(df_hist))
+
 # add a column for the number of instances
 df$number <- 1
 df$row_num <- as.numeric(rownames(df))
@@ -95,10 +102,12 @@ data_ends <- df %>%
 
 #create line graph
 ggplot(df,aes(x=`row_nums_same`,y=`c_number`, group=`type`, color=`type`))+
+#ggplot(df,aes(x=`row_nums_same`,y=`c_number`, group=1, color=1))+  # single line only
 geom_line()+
 #scale_x_date(date_labels="%d/%m/%Y",date_breaks="1 week")+ #can be 1 day, 1 week, 1 month
 #geom_text(data=filter(df,`c_number`==last(`c_number`)), aes(label=round(`c_number`,0)),vjust=-0.5)+
 geom_text(data=data_ends,aes(label=round(`c_number`,0)),vjust=-0.5,size=2.5)+
+#geom_text(data=filter(df_c,tot == last(tot)), aes(label=round(`tot`,0)),vjust=-0.5,size=2.5)+ # single line only
 scale_color_manual(values=alpha(c("#CD2456","#14022E")),name="xyz")+
 #scale_x_continuous(1:5)+
 #geom_point(aes(shape=`column`))+
