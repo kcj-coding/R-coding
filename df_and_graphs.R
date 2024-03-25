@@ -47,6 +47,10 @@ colnames(df)[colnames(df) == "pct_v"] <- "pct_t"
 # get top 10
 df_top10 <- df[1:10,]
 
+# filter type to examples containing a
+df_a <- df %>%
+  filter(grepl("a",df$type))
+
 # make another, unused dataframe and join the first dataframe onto this second dataframe
 df_unused <- data.frame(col1=data,col2=c(50,50,50,50,50,50,50,50,50,50))
 
