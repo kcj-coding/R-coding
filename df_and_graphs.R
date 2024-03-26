@@ -44,6 +44,9 @@ df <- df[order(df$data, decreasing = FALSE), ]
 # rename specific column
 colnames(df)[colnames(df) == "pct_v"] <- "pct_t"
 
+# new column with previous values, lag for prv, lead for next
+df$prv_data <- lag(df$data, n=1, default=0) # default for setting any NA or missing values
+
 # get top 10
 df_top10 <- df[1:10,]
 
