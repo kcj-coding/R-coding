@@ -1,4 +1,5 @@
 library(dplyr)
+library(summarytools)
 library(ggplot2)
 
 data <- c(1,2,3,4,5,6,7,8,9,10)
@@ -9,6 +10,9 @@ df <- data.frame(data=data, type=typer)
 
 # get summary
 df_summary = as.data.frame(summary(df))
+
+# display summary data graphically
+view(summarytools::dfSummary(df))
 
 # histogram of numeric values
 df_hist <- df[, sapply(df, class) == 'numeric']
