@@ -156,3 +156,17 @@ labs(x="Instance",y="Instance",title="title")
 
 #save graph
 #ggsave(path="C:\\",svname,height=15,width=30,units="cm")
+
+################################################################################
+
+# get boxplot of data and list the values
+
+ggplot(df,aes(x=type,y=data))+
+  geom_boxplot(outlier.shape = NA)+ # remove outliers when jitter
+  #geom_jitter(height = 0, width = 0.0)+
+  geom_point() +
+  theme_classic()+
+  labs(y="data",x="type")
+
+stats <- boxplot(data ~ type, data=df)
+stats
