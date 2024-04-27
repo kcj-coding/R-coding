@@ -92,3 +92,12 @@ non_dupe_ltr <- str_extract_all(string3, "\\b(?!\\w*?(\\w)\\1)(\\w+)")
 
 # find instances of repeated letters in the string
 rptd_ltrs <- str_extract_all(string3, "(\\w+)\\1")
+
+################################################################################
+
+string4 <- "The summary report was useful. The report had samples of data."
+
+# find the first occurrence of report or sample, case insensitive
+# which is separated by a word boundary, or begins with a number and then a word boundary
+
+sngl_match <- str_extract(string4, "\\b([Rr]eport|[Ss]ample).*\\b.*|.*\\d+.*\\b([Rr]eport|[Ss]ample)\\b.*")
