@@ -101,3 +101,10 @@ string4 <- "The summary report was useful. The report had samples of data."
 # which is separated by a word boundary, or begins with a number and then a word boundary
 
 sngl_match <- str_extract(string4, "\\b([Rr]eport|[Ss]ample).*\\b.*|.*\\d+.*\\b([Rr]eport|[Ss]ample)\\b.*")
+
+################################################################################
+
+string5 <- "C:\\Users\\kelvi\\Documents"
+
+# find any match to a letter "k" and return the entire string between \\
+k_match <- str_extract_all(string5, "(?=k[\\w+]).*?(?=\\|\\/|(?=$))")
