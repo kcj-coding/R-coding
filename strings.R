@@ -108,3 +108,14 @@ string5 <- "C:\\Users\\kelvi\\Documents"
 
 # find any match to a letter "k" and return the entire string between \\
 k_match <- str_extract_all(string5, "(?=k[\\w+]).*?(?=\\|\\/|(?=$))")
+
+################################################################################
+
+string6 <- "1. The day: The day was good. 2. The next day: The next day was 26.2C."
+
+# find the numbers (with the fullstop) before the :
+nbr_match <- str_extract_all(string6, "(\\d+)(?=\\D+\\:)")
+
+################################################################################
+
+# In R, if using strsplit you may need to use perl = TRUE e.g. txt_split <- strsplit(string6, "(\\d+)(?=\\D+\\:)", perl = TRUE)
