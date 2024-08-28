@@ -1,7 +1,7 @@
 #library(tidyverse)
 library(dplyr)
 library(ggplot2)
-library(summarytools)
+#library(summarytools)
 
 setwd("C:\\Users\\kelvi\\Desktop")
 folder <- "C:\\Users\\kelvi\\Desktop\\Graphs\\"
@@ -41,8 +41,10 @@ cbindPad <- function(...){
 }
 
 # for these, make 2 new columns in df which represent the character and factor conversions
-dfs = data.frame()
-for (i in sequence(1, length(df_chr),1)){
+#dfs = data.frame()
+#dfs <- data.frame(testcol=1:nrow(df_chr))
+d <- list()
+for (i in seq(1, length(df_chr),1)){
   df_chk <- df_chr[,i]
   name1 <- names(df_chr[i])
   name2 <- paste(name1,"_fct",sep="")
@@ -52,9 +54,17 @@ for (i in sequence(1, length(df_chr),1)){
   # rename columns
   colnames(datad) <- c(name1,name2)
   
-  dfs <- cbindPad(dfs,datad)
+  #dfs <- cbindPad(dfs,datad)
+  #dfs <- cbind(dfs, datad)
+  d[[i]] <- datad
   
 }
+
+#dfs <- select(dfs, -testcol)
+dfs <- do.call(cbind,d)
+
+# write output csv of this data
+write.csv(dfs,paste(folder,"output.csv",sep=""), row.names=FALSE)
 
 # remove all character columns from original df and add on these generated columns
 
@@ -88,6 +98,8 @@ for (i in seq(1, length(df_nums), 1)){
       ################## ggplot graph ##########################################
       ggplot(df_nums, aes(x=df_nums[,i], y=df_nums[,j]))+
         geom_point()+
+        geom_smooth(method=lm, formula=y~x, se=FALSE, color="blue")+
+        geom_smooth(method=lm, formula=y~splines::bs(x,3), se=FALSE, color="red")+
         theme_classic()+
         labs(x=names(df_nums[i]), y=names(df_nums[j]), title=paste("Plot of ",names(df_nums[i]), " by ", names(df_nums[j]), sep=""))
       # save
