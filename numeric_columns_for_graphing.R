@@ -74,12 +74,35 @@ df <- df[sapply(df, class) != 'character']
 # join on created data
 df <- cbind(df, dfs)
 
+# fill any numeric NA with 0
+na.zero <- function(x) replace(x, is.na(x), 0)
+ok <- sapply(df, is.numeric)
+df <- replace(df, ok, lapply(df[ok], na.zero))
+
 # for graphs, use numeric columns only
 df_nums <- df[sapply(df, class) == 'numeric']
 
 for (i in seq(1, length(df_nums), 1)){
   for (j in seq(1, length(df_nums), 1)){
     if (i != j){
+      ##########################################################################
+      
+      ############# linear equation examples for graph #########################
+      lm1 <- lm(df_nums[,j] ~ df_nums[,i])
+      lm2 <- lm(df_nums[,j] ~ poly(df_nums[,i],3,raw=TRUE))
+      
+      # lm1 model #############################################
+      a = format(unname(coef(lm1)[1]), digits = 2) # intercept
+      b = format(unname(coef(lm1)[2]), digits = 2) # bx term
+      r2 = format(summary(lm1)$r.squared, digits = 3) # r-squared
+      
+      # lm2 model #############################################
+      ap = format(unname(coef(lm2)[1]), digits = 2) # intercept
+      bp = format(unname(coef(lm2)[2]), digits = 2) # bx term
+      bp2 = format(unname(coef(lm2)[3]), digits = 2) # bx2 term
+      bp3 = format(unname(coef(lm2)[4]), digits = 2) # bx3 term
+      r2p = format(summary(lm2)$r.squared, digits = 3) # r-squared
+      
       ############## base R graph ##############################################
       # for plot.new() keep view on Plots tab, to avoid new window opening
       plot.new()
@@ -95,13 +118,16 @@ for (i in seq(1, length(df_nums), 1)){
       dev.copy(png, paste(folder,names(df_nums[i]),"\\",names(df_nums[i]),"_",names(df_nums[j]),"both_plot.png",sep=""))
       dev.off()
       
+      ##########################################################################
+      
       ################## ggplot graph ##########################################
       ggplot(df_nums, aes(x=df_nums[,i], y=df_nums[,j]))+
         geom_point()+
         geom_smooth(method=lm, formula=y~x, se=FALSE, color="blue")+
         geom_smooth(method=lm, formula=y~splines::bs(x,3), se=FALSE, color="red")+
         theme_classic()+
-        labs(x=names(df_nums[i]), y=names(df_nums[j]), title=paste("Plot of ",names(df_nums[i]), " by ", names(df_nums[j]), sep=""))
+        labs(x=names(df_nums[i]), y=names(df_nums[j]), title=paste("Plot of ",names(df_nums[i]), " by ", names(df_nums[j]), " || LR: ", "y=",b,"x+",a," r2=",r2, " || PY: ", "y=",bp,"x+",bp2,"x2+",bp3,"x3+",ap," r2=",r2p,sep=""))+
+        theme(plot.title = element_text(size=12))
       # save
       ggsave(paste(folder,names(df_nums[i]),"\\",names(df_nums[i]),"_",names(df_nums[j]),"ggplot_both_plot.png",sep=""),width=30,height=15,units="cm")
       
