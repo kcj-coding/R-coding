@@ -131,6 +131,31 @@ for (i in seq(1, length(df_nums), 1)){
       # save
       ggsave(paste(folder,names(df_nums[i]),"\\",names(df_nums[i]),"_",names(df_nums[j]),"ggplot_both_plot.png",sep=""),width=30,height=15,units="cm")
       
+      ##########################################################################
+      
+      ####################### k-means clustering ###############################
+      
+      tryCatch({
+      # scale the data
+      dfx <- df_nums[,c(i,j)]
+      dfx[,c(1,2)] <- scale(dfx[,c(1,2)])
+      
+      set.seed(123)
+      n_clusters <- 50 # number of clusters to use
+      
+      # build k-means model
+      km.out <- kmeans(dfx, centers = n_clusters, nstart = 20)
+      
+      dfx$cluster_id <- factor(km.out$cluster)
+      
+      ggplot(dfx, aes(x=dfx[,1], y=dfx[,2], color = cluster_id))+
+        geom_point()+
+        theme_classic()+
+        labs(x=names(df_nums[i]), y=names(df_nums[j]), title=paste("Plot of ",names(df_nums[i]), " by ", names(df_nums[j]), sep=""))+
+        theme(plot.title = element_text(size=12))
+      # save
+      ggsave(paste(folder,names(df_nums[i]),"\\",names(df_nums[i]),"_",names(df_nums[j]),"_cluster_ggplot_both_plot.png",sep=""),width=30,height=15,units="cm")
+      }, error = function(e) e)
       }
   }
 }
