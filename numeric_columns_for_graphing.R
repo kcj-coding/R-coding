@@ -4,7 +4,8 @@ library(ggplot2)
 #library(summarytools)
 
 setwd("C:\\Users\\kelvi\\Desktop")
-folder <- "C:\\Users\\kelvi\\Desktop\\Graphs\\"
+folder <- "C:\\Users\\kelvi\\Desktop\\"
+output_folder <- "C:\\Users\\kelvi\\Desktop\\Graphs\\"
 
 data <- c(1,2,3,4,5,6,7,8,9,10)
 typer <- c("a","b","a","b","a","b","a","b","a","b")
@@ -110,12 +111,12 @@ for (i in seq(1, length(df_nums), 1)){
       
       # check if folder exists if not create it
       # check/create a folder
-      if (!file.exists(paste(folder,names(df_nums[i]),sep=""))){
-        dir.create(paste(folder,names(df_nums[i]),sep=""))
+      if (!file.exists(paste(output_folder,names(df_nums[i]),sep=""))){
+        dir.create(paste(output_folder,names(df_nums[i]),sep=""))
       }
       
       # save base R graph
-      dev.copy(png, paste(folder,names(df_nums[i]),"\\",names(df_nums[i]),"_",names(df_nums[j]),"both_plot.png",sep=""))
+      dev.copy(png, paste(output_folder,names(df_nums[i]),"\\",names(df_nums[i]),"_",names(df_nums[j]),"both_plot.png",sep=""))
       dev.off()
       
       ##########################################################################
@@ -129,41 +130,51 @@ for (i in seq(1, length(df_nums), 1)){
         labs(x=names(df_nums[i]), y=names(df_nums[j]), title=paste("Plot of ",names(df_nums[i]), " by ", names(df_nums[j]), " || LR: ", "y=",b,"x+",a," r2=",r2, " || PY: ", "y=",bp,"x+",bp2,"x2+",bp3,"x3+",ap," r2=",r2p,sep=""))+
         theme(plot.title = element_text(size=12))
       # save
-      ggsave(paste(folder,names(df_nums[i]),"\\",names(df_nums[i]),"_",names(df_nums[j]),"ggplot_both_plot.png",sep=""),width=30,height=15,units="cm")
+      ggsave(paste(output_folder,names(df_nums[i]),"\\",names(df_nums[i]),"_",names(df_nums[j]),"ggplot_both_plot.png",sep=""),width=30,height=15,units="cm")
       
       ##########################################################################
       
       ####################### k-means clustering ###############################
       
       tryCatch({
-      # scale the data
-      dfx <- df_nums[,c(i,j)]
-      dfx[,c(1,2)] <- scale(dfx[,c(1,2)])
-      
-      set.seed(123)
-      n_clusters <- 50 # number of clusters to use
-      
-      # build k-means model
-      km.out <- kmeans(dfx, centers = n_clusters, nstart = 20)
-      
-      dfx$cluster_id <- factor(km.out$cluster)
-      
-      ggplot(dfx, aes(x=dfx[,1], y=dfx[,2], color = cluster_id))+
-        geom_point()+
-        theme_classic()+
-        labs(x=names(df_nums[i]), y=names(df_nums[j]), title=paste("Plot of ",names(df_nums[i]), " by ", names(df_nums[j]), sep=""))+
-        theme(plot.title = element_text(size=12))
-      # save
-      ggsave(paste(folder,names(df_nums[i]),"\\",names(df_nums[i]),"_",names(df_nums[j]),"_cluster_ggplot_both_plot.png",sep=""),width=30,height=15,units="cm")
+        # scale the data
+        dfx <- df_nums[,c(i,j)]
+        dfx[,c(1,2)] <- scale(dfx[,c(1,2)])
+        
+        set.seed(123)
+        n_clusters <- 5 # number of clusters to use
+        
+        use_nbclust <- FALSE
+        # or use NbClust to get optimum nbr of clusters
+        if (use_nbclust == TRUE){
+        library(NbClust)
+        res <- NbClust(dfx, method = 'complete', index = 'all',min.nc=1, max.nc=10)
+        res <- res$Best.nc
+        
+        n_clusters <- res
+        }
+        
+        # build k-means model
+        km.out <- kmeans(dfx, centers = n_clusters, nstart = 20)
+        
+        dfx$cluster_id <- factor(km.out$cluster)
+        
+        ggplot(dfx, aes(x=dfx[,1], y=dfx[,2], color = cluster_id))+
+          geom_point()+
+          theme_classic()+
+          labs(x=names(df_nums[i]), y=names(df_nums[j]), title=paste("Plot of ",names(df_nums[i]), " by ", names(df_nums[j]), sep=""))+
+          theme(plot.title = element_text(size=12))
+        # save
+        ggsave(paste(output_folder,names(df_nums[i]),"\\",names(df_nums[i]),"_",names(df_nums[j]),"_cluster_ggplot_both_plot.png",sep=""),width=30,height=15,units="cm")
       }, error = function(e) e)
-      }
+    }
   }
 }
 
 # remove locally saved plots
 # list all files in folder location, and remove them all
-files_del <- list.files(folder)
+files_del <- list.files(output_folder)
 
 for (folder_name in files_del){
-  unlink(paste(folder,folder_name,sep=""), recursive = TRUE)
+  unlink(paste(output_folder,folder_name,sep=""), recursive = TRUE)
 }
