@@ -58,7 +58,7 @@ ggplot() +
   theme(title = element_text(size = 9))+
   theme(plot.background = element_rect(fill = "white"))
 
-ggsave(paste(output_folder,"test.png",sep=""),width=22,height=12,units="cm")
+ggsave(paste(output_folder,"test.png",sep=""),width=30,height=15,units="cm")
 
 # plot these on a UK map, ggrepel
 
@@ -89,7 +89,7 @@ ggplot() +
   theme(title = element_text(size = 9))+
   theme(plot.background = element_rect(fill = "white"))
 
-ggsave(paste(output_folder,"test_ggrepel.png",sep=""),width=22,height=12,units="cm")
+ggsave(paste(output_folder,"test_ggrepel.png",sep=""),width=30,height=15,units="cm")
 
 ################################################################################
 ########################## region map plot ######################################
@@ -137,46 +137,47 @@ ggplot(eng_reg_map, aes(fill=pct))+
   theme(title = element_text(size = 9))+
   theme(plot.background = element_rect(fill = "white"))
 
-ggsave(paste(output_folder,"test_regions_ggrepel.png",sep=""),width=22,height=12,units="cm")
+ggsave(paste(output_folder,"test_regions_ggrepel.png",sep=""),width=30,height=15,units="cm")
 
 ################################################################################
-########################## UTLA map plot ######################################
+########################## MSOA can be too detailed for some tasks ~ 7,000 shapes drawn #######################
+########################## MSOA (middle layer super output areas) map plot ######################################
 
-# this example takes the regions/boundaries as provided by the shape file
+# this example takes the regions/boundaries as provided by the shape file for  census data
 
 # rather than plot using co-ordinates, this uses the defined shapes, and colours the areas of the shapes by e.g. count/number
 # to get this, join on data as needed
 
 # load the boundary shape folder name
-file <- "Upper_Tier_Local_Authorities_December_2022_Boundaries_UK_BFC_-745140168582188301" # extract zipped file
+file <- "Middle_layer_Super_Output_Areas_December_2021_Boundaries_EW_BFC_V7_2867952542166070674" # extract zipped file
 
 # using the sf library, read the shape files
-eng_utla_map <- st_read(paste(folder_location,file,sep=""))
+eng_msoa_map <- st_read(paste(folder_location,file,sep=""))
 
 # at this point, from the postcode data use an intermediate file to join the postcodes to region locations
 # the postcode lookup file
 #file <- "pcd_oa_lsoa_msoa_ltla_utla_rgn_ctry_ew_may_2021_lu_v2.csv"
 #postcode_lookup <- read.csv(paste(folder_location,file,sep=""))
 
-# select something like RGN22CD for the grid to match on
-postcode_lookup2 <- select(postcode_lookup, pcd, utla22cd, utla22nm) # grid number and region name
+# select something like MSOA22CD for the grid to match on
+postcode_lookup2 <- select(postcode_lookup, pcd, msoa21cd, msoa21nm) # grid number and region name
 
 # take the postcode from the original source data and get the match
 df_post2 <- left_join(df_post,postcode_lookup, join_by(postcode==pcd))
 
 # then get count by region
-count_utla <- df_post2 %>%
-  group_by(utla22nm) %>%
+count_msoa <- df_post2 %>%
+  group_by(msoa21nm) %>%
   summarise(pct=pct)#n()
 
 # on eng_reg_map left_join this data
-eng_utla_map <- left_join(eng_utla_map, count_utla, join_by("UTLA22NM"==utla22nm))
+eng_msoa_map <- left_join(eng_msoa_map, count_msoa, join_by(MSOA21NM==msoa21nm))
 
 # fill count na with 0
-eng_utla_map[is.na(eng_utla_map)] = 0
+eng_msoa_map[is.na(eng_msoa_map)] = 0
 
 # graph this
-ggplot(eng_utla_map, aes(fill=pct))+
+ggplot(eng_msoa_map, aes(fill=pct))+
   geom_sf(colour = "grey")+
   theme_void()+
   labs(title="UK map of train station locations, with % of station contribution to total")+
@@ -185,7 +186,60 @@ ggplot(eng_utla_map, aes(fill=pct))+
   theme(title = element_text(size = 9))+
   theme(plot.background = element_rect(fill = "white"))
 
-ggsave(paste(output_folder,"test_utla_ggrepel.png",sep=""),width=22,height=12,units="cm")
+ggsave(paste(output_folder,"test_msoa.png",sep=""),width=30,height=15,units="cm")
+
+
+run_LSOA <- FALSE
+if (run_LSOA == TRUE){
+################################################################################
+########################## LSOA can be too detailed for some tasks ~ 36,000 shapes drawn #######################
+########################## LSOA (lower layer super output areas) map plot ######################################
+
+# this example takes the regions/boundaries as provided by the shape file for  census data
+
+# rather than plot using co-ordinates, this uses the defined shapes, and colours the areas of the shapes by e.g. count/number
+# to get this, join on data as needed
+
+# load the boundary shape folder name
+file <- "Lower_layer_Super_Output_Areas_December_2021_Boundaries_EW_BFC_V10_8562115581115271145" # extract zipped file
+
+# using the sf library, read the shape files
+eng_lsoa_map <- st_read(paste(folder_location,file,sep=""))
+
+# at this point, from the postcode data use an intermediate file to join the postcodes to region locations
+# the postcode lookup file
+#file <- "pcd_oa_lsoa_msoa_ltla_utla_rgn_ctry_ew_may_2021_lu_v2.csv"
+#postcode_lookup <- read.csv(paste(folder_location,file,sep=""))
+
+# select something like LSOA22CD for the grid to match on
+postcode_lookup2 <- select(postcode_lookup, pcd, lsoa21cd, lsoa21nm) # grid number and region name
+
+# take the postcode from the original source data and get the match
+df_post2 <- left_join(df_post,postcode_lookup, join_by(postcode==pcd))
+
+# then get count by region
+count_lsoa <- df_post2 %>%
+  group_by(lsoa21nm) %>%
+  summarise(pct=pct)#n()
+
+# on eng_reg_map left_join this data
+eng_lsoa_map <- left_join(eng_lsoa_map, count_lsoa, join_by(LSOA21NM==lsoa21nm))
+
+# fill count na with 0
+eng_lsoa_map[is.na(eng_lsoa_map)] = 0
+
+# graph this
+ggplot(eng_lsoa_map, aes(fill=pct))+
+  geom_sf(colour = "grey")+
+  theme_void()+
+  labs(title="UK map of train station locations, with % of station contribution to total")+
+  theme(plot.title = element_text(colour = "black"))+
+  #theme(legend.position = 'none') + 
+  theme(title = element_text(size = 9))+
+  theme(plot.background = element_rect(fill = "white"))
+
+ggsave(paste(output_folder,"test_lsoa.png",sep=""),width=30,height=15,units="cm")
+}
 
 end_time <- Sys.time()
 run_time <- end_time - start_time
