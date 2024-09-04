@@ -1,10 +1,14 @@
 # https://bookdown.org/mike/data_analysis/synthetic-control.html
 # https://carlos-mendez.quarto.pub/r-synthetic-control-tutorial/
+library(dplyr)
 library("Synth")
 #library(SCtools)
 #library("gsynth")
+#library(ggplot2)
 
 #options(repr.plot.width=20, repr.plot.height=10)
+
+output_folder <- "C:\\Users\\kelvi\\Desktop\\"
 
 # make up some data
 countries <- rep(c("England","France","USA"),each=60)
@@ -64,10 +68,16 @@ df <- select(df, y, data, more_data, countries, int_date, countries_num, treatme
 df_treated <- df %>%
   filter(countries=="France")
 
-ggplot(df_treated,aes(x=int_date,y=y))+
-  geom_line()+
-  labs(x="Date",y="Number",title="")+
-  theme_classic()
+plot.new()
+plot(df_treated$int_date, df_treated$y, type="l")
+dev.copy(png,paste(output_folder,"testpath1.png",sep=""))
+dev.off()
+
+
+#ggplot(df_treated,aes(x=int_date,y=y))+
+#  geom_line()+
+#  labs(x="Date",y="Number",title="")+
+#  theme_classic()
 
 ################################################################################
 
@@ -96,7 +106,8 @@ print(synth.tables   <- synth.tab(
 )
 
 ################################################################################
-
+#dev.print(png,paste(output_folder,"testpath1.png",sep=""),width=1920,height=1080)
+plot.new()
 path.plot(synth.res    = synth.out,
           dataprep.res = dataprep.out,
           Ylab         = c("Y"),
@@ -108,7 +119,11 @@ path.plot(synth.res    = synth.out,
 
 abline(v   = 15,
        lty = 2)
+dev.copy(png,paste(output_folder,"synthetic.png",sep=""))
+dev.off()
 
+
+plot.new()
 gaps.plot(synth.res    = synth.out,
           dataprep.res = dataprep.out,
           Ylab         = c("Gap"),
@@ -119,6 +134,8 @@ gaps.plot(synth.res    = synth.out,
 
 abline(v   = 15,
        lty = 2)
+dev.copy(png,paste(output_folder,"gaps_synthetic.png",sep=""))
+dev.off()
 
 ################################################################################
 
@@ -148,6 +165,7 @@ print(synth.tables   <- synth.tab(
 
 ################################################################################
 
+plot.new()
 path.plot(synth.res    = synth.out,
           dataprep.res = dataprep.out,
           Ylab         = c("Y"),
@@ -160,6 +178,10 @@ path.plot(synth.res    = synth.out,
 abline(v   = 15,
        lty = 2)
 
+dev.copy(png,paste(output_folder,"placebo.png",sep=""))
+dev.off()
+
+plot.new()
 gaps.plot(synth.res    = synth.out,
           dataprep.res = dataprep.out,
           Ylab         = c("Gap"),
@@ -170,6 +192,9 @@ gaps.plot(synth.res    = synth.out,
 
 abline(v   = 15,
        lty = 2)
+
+dev.copy(png,paste(output_folder,"gaps_placebo.png",sep=""))
+dev.off()
 
 ################################################################################
 
@@ -241,9 +266,10 @@ data <- cbind(data,real_res)
 # then graph this data
 
 # Plot
+plot.new()
 plot(years,data[gap.start:gap.end,which(colnames(data)=="France_real")],
-     ylim=c(-30,30),xlab="year",
-     xlim=c(1,60),ylab="Gap in real GDPpc",
+     ylim=c(-30,30),xlab="Date",
+     xlim=c(1,60),ylab="Number",
      type="l",lwd=2,col="black",
      xaxs="i",yaxs="i")
 
@@ -262,6 +288,9 @@ abline(v=1)
 abline(v=60)
 abline(h=-2)
 abline(h=2)
+
+dev.copy(png,paste(output_folder,"gaps_control.png",sep=""))
+dev.off()
 
 
 
