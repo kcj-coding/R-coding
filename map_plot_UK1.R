@@ -14,6 +14,8 @@ start_time <- Sys.time()
 folder_location <- "C:\\Users\\kelvi\\Desktop\\"
 output_folder <- "C:\\Users\\kelvi\\Desktop\\"
 
+graph_title <- "UK Map"
+
 # load nspl file
 postcodes <- read.csv(paste(folder_location,"NSPL_AUG_2024_UK.csv",sep=""))
 
@@ -52,7 +54,7 @@ ggplot() +
                                  y = as.numeric(lat),label=paste(pct,"%",sep="")),vjust=5.3, size=2.0)+
   scale_size_area(max_size = 8) + 
   scale_color_viridis_c() + 
-  labs(title="UK map of train station locations, with % of station contribution to total")+
+  labs(title=graph_title)+
   theme(plot.title = element_text(colour = "black"))+
   theme(legend.position = 'none') + 
   theme(title = element_text(size = 9))+
@@ -83,7 +85,7 @@ ggplot() +
                    min.segment.length = 0,box.padding=0.1, max.time = 1, max.iter = 1e5, max.overlaps=10, size=1.5)+
   scale_size_area(max_size = 8) + 
   scale_color_viridis_c() + 
-  labs(title="UK map of train station locations, with % of station contribution to total")+
+  labs(title=graph_title)+
   theme(plot.title = element_text(colour = "black"))+
   theme(legend.position = 'none') + 
   theme(title = element_text(size = 9))+
@@ -130,8 +132,9 @@ eng_reg_map[is.na(eng_reg_map)] = 0
 # graph this
 ggplot(eng_reg_map, aes(fill=pct))+
   geom_sf(colour = "grey")+
+  scale_fill_viridis_c() +
   theme_void()+
-  labs(title="UK map of train station locations, with % of station contribution to total")+
+  labs(title=graph_title)+
   theme(plot.title = element_text(colour = "black"))+
   #theme(legend.position = 'none') + 
   theme(title = element_text(size = 9))+
@@ -179,8 +182,9 @@ eng_msoa_map[is.na(eng_msoa_map)] = 0
 # graph this
 ggplot(eng_msoa_map, aes(fill=pct))+
   geom_sf(colour = "grey")+
+  scale_fill_viridis_c(option="magma") +
   theme_void()+
-  labs(title="UK map of train station locations, with % of station contribution to total")+
+  labs(title=graph_title)+
   theme(plot.title = element_text(colour = "black"))+
   #theme(legend.position = 'none') + 
   theme(title = element_text(size = 9))+
@@ -231,8 +235,9 @@ eng_lsoa_map[is.na(eng_lsoa_map)] = 0
 # graph this
 ggplot(eng_lsoa_map, aes(fill=pct))+
   geom_sf(colour = "grey")+
+  scale_fill_viridis_c(option="magma") +
   theme_void()+
-  labs(title="UK map of train station locations, with % of station contribution to total")+
+  labs(title=graph_title)+
   theme(plot.title = element_text(colour = "black"))+
   #theme(legend.position = 'none') + 
   theme(title = element_text(size = 9))+
