@@ -1,5 +1,6 @@
 library(dplyr)
 library(fpp3)
+# install.packahes("urca")
 # https://otexts.com/fpp3/
 library(ggplot2)
 
@@ -62,11 +63,21 @@ autoplot(df_eng,Data) +
 ggsave(paste(output_folder,"basic_graph2.png",sep=""),width=30,height=15,units="cm")
 
 # check for differences, make sure stationary
+
+# print(df_eng |> features(Data, unitroot_kpss)) # if pvalue is 0.01, it can be <= 0.01. If 0.1 it can be >= 0.1
+
 df_eng %>%
   gg_tsdisplay(difference(Data, 1),
                plot_type='partial', lag=5) +
   labs(title="Seasonally differenced", y="")
 ggsave(paste(output_folder,"differences1.png",sep=""),width=30,height=15,units="cm")
+
+# get ACF and PACF plots
+df_eng |> ACF(difference(Data)) |> autoplot()
+ggsave(paste(output_folder,"differences1_acf.png",sep=""),width=30,height=15,units="cm")
+
+df_eng |> PACF(difference(Data)) |> autoplot()
+ggsave(paste(output_folder,"differences1_pacf.png",sep=""),width=30,height=15,units="cm")
 
 # difference again
 df_eng %>%
@@ -75,7 +86,131 @@ df_eng %>%
   labs(title = "Double differenced", y="")
 ggsave(paste(output_folder,"differences2.png",sep=""),width=30,height=15,units="cm")
 
+# get ACF and PACF plots
+df_eng |> ACF(difference(Data) |> difference()) |> autoplot()
+ggsave(paste(output_folder,"differences2_acf.png",sep=""),width=30,height=15,units="cm")
+
+df_eng |> PACF(difference(Data) |> difference()) |> autoplot()
+ggsave(paste(output_folder,"differences2_pacf.png",sep=""),width=30,height=15,units="cm")
+
+################################################################################
+
+# fit some models - you can either loop through parameters or manually specify some or use automated fitting
+
 # model the data with different model types and pick best fit
+d_spec <- 1 # the number of times the data has been differenced
+
+p_try <- seq(0,4,1)
+q_try <- seq(0,4,1)
+
+# store values in list
+p_lst <- list()
+q_lst <- list()
+
+for (i in p_try){
+  for (j in q_try){
+    p_lst <- append(p_lst, i)
+    q_lst <- append(q_lst, j)
+  }
+}
+
+pq_det <- data.frame(p=unlist(p_lst), q=unlist(q_lst))
+
+# iterate through different model parameters for P and Q
+# model the data with different model types and pick best fit
+d_spec <- 1 # the number of times the data has been differenced
+
+P_try <- seq(0,4,1)
+Q_try <- seq(0,4,1)
+
+# store values in list
+P_lst <- list()
+Q_lst <- list()
+
+for (i in P_try){
+  for (j in Q_try){
+    P_lst <- append(P_lst, i)
+    Q_lst <- append(Q_lst, j)
+  }
+}
+
+PQ_det <- data.frame(P=unlist(P_lst), Q=unlist(Q_lst))
+
+# combine pq_det and PQ_det
+pq_det <- cbind(pq_det, PQ_det)
+
+
+# store model performance results
+res <- list()
+
+for (i in seq(1,length(pq_det),1)){
+  tryCatch({
+  d_val <- d_spec
+  p_val <- pq_det$p[[i]]
+  q_val <- pq_det$q[[i]]
+  P_val <- pq_det$P[[i]]
+  Q_val <- pq_det$Q[[i]]
+  
+  model_test <- df_eng %>%
+    model(arima = ARIMA(Data ~ pdq(p=p_val,d=d_val,q=q_val) + PDQ(P=P_val,D=d_val,Q=Q_val)))
+  
+  model_test_res <- model_test %>% pivot_longer(everything(), names_to = "Model name",
+                                 values_to = "Orders")
+  
+  # capture the model AIC and details and put in df
+  model_df <- glance(model_test_res) %>% arrange(AICc) %>% select(.model:BIC)
+  
+  # add some identifying columns
+  model_df$p_val <- p_val#pq_det$p[[i]]
+  model_df$q_val <- q_val#pq_det$q[[i]]
+  model_df$P_val <- P_val#pq_det$P[[i]]
+  model_df$Q_val <- Q_val#pq_det$Q[[i]]
+  model_df$.model <- paste("Arima(",p_val,d_val,q_val,")(",P_val,d_val,Q_val,")",sep="")
+  
+  res[[i]] <- model_df
+  }, error = function(e) e) 
+}
+
+model_results <- do.call(rbind,res)
+
+# sort AICc desc
+model_results <- model_results %>% arrange(AICc)
+
+################################################################################
+
+# test the fitted model
+model_res1 <- model_results[1:1,]
+model_name_res <- model_res1$.model[[1]]
+
+# get model to use in fit
+
+fit <- df_eng %>%
+  model(arima = ARIMA(Data ~ pdq(model_res1$p_val, d_spec,model_res1$q_val)+PDQ(model_res1$P_val, d_spec,model_res1$Q_val)))
+
+# check acf, residuals, ljung-box
+fit %>% select(arima) %>% gg_tsresiduals(lag=5)
+ggsave(paste(output_folder,"residuals_iter.png",sep=""),width=30,height=15,units="cm")
+
+augment(fit) %>%
+  filter(.model == "arima") %>%
+  features(.innov, ljung_box, lag=5, dof=4) # dof degrees of freedom to match parameters of model
+
+################################################################################
+
+# forecast future values
+
+forecast(fit, h=36) %>%
+  filter(.model=='arima') %>%
+  autoplot(df_eng) +
+  labs(title = paste(graph_title,", ARIMA(",model_res1$p_val, d_spec,model_res1$q_val,")+(",model_res1$P_val, d_spec,model_res1$Q_val,") model", sep=""),
+       y="Number")
+ggsave(paste(output_folder,"forecast_iter.png",sep=""),width=30,height=15,units="cm")
+
+# select best model for fitting
+
+# forecast
+
+########### automated fitting ######################
 
 fit <- df_eng %>%
   model(
@@ -93,16 +228,22 @@ fit %>% pivot_longer(everything(), names_to = "Model name",
 
 glance(fit) %>% arrange(AICc) %>% select(.model:BIC)
 
+################################################################################
+
+# test the fitted model
+
 # check acf, residulas, ljung-box
 
 fit %>% select(arima210011) %>% gg_tsresiduals(lag=5)
+ggsave(paste(output_folder,"residuals.png",sep=""),width=30,height=15,units="cm")
 
 augment(fit) %>%
   filter(.model == "arima210011") %>%
-  features(.innov, ljung_box, lag=5, dof=4) #dof degrees of freedom to match parameters of model
+  features(.innov, ljung_box, lag=5, dof=4) # dof degrees of freedom to match parameters of model
+
+################################################################################
 
 # forecast future values
-
 
 forecast(fit, h=36) %>%
   filter(.model=='arima210011') %>%
