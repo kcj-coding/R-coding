@@ -1,7 +1,7 @@
 library(dplyr)
 library(ggplot2)
 
-dat <- rnorm(60)
+dat <- rnorm(90)
 
 df <- data.frame(data=dat)
 df$dat <- df$dat * 1e2
@@ -44,6 +44,13 @@ df$exp <- mdl_preds
 df$exp_val <- ifelse(df$dat < (df$exp*(-5)), "outlier",
                      ifelse(df$dat > (df$exp*(5)), "outlier", "expected"))
 
+# get mape, mae, rmse
+mdl_mape <- mean(abs((df$dat-df$exp)/df$dat)) * 100
+
+mdl_mae <- mean(abs((df$dat-df$exp)))
+
+mdl_rmse <- sqrt(mean(abs((df$dat - df$exp)^2)))
+
 # graph this
 ggplot(df, aes(xdata, dat, color=exp_val))+
   geom_point()+
@@ -52,4 +59,72 @@ ggplot(df, aes(xdata, dat, color=exp_val))+
   geom_line(aes(df$xdata,-(df$exp)*5), color="blue")+
   theme_classic()+
   labs(x="Datapoint", y="Number", title=paste("LR: ", "y=",b,"x+",a," r2=",r2,sep=""), color="Type")
+
+################################################################################
+
+# credit to https://stackoverflow.com/questions/74295914/bootstrap-distribution-of-slope-on-linear-regression
+
+# make a bootstrap of the model (automatic method)
+library(boot)
+
+boot_coef <- function(df, idx) {
+  x <- df[ idx, 'xdata' ]
+  y <- df[ idx, 'dat' ]
+  lm.out <- lm(y ~ x)
+  coef(lm.out)[[ 2 ]]
+}
+
+bs <- boot(data = df, statistic = boot_coef, R = 999)
+print(bs)
+bs.ci <- boot.ci(boot.out = bs)
+print(bs.ci)
+
+#########################
+
+# alternative bootstrap of model (manual method)
+
+FUN <- \() {
+  i <- sample(seq_len(length(df$xdata)), replace=TRUE)
+  y <- df$dat[i]
+  x <- df$xdata[i]
+  lm(y ~ x)$coefficients
+  #predict(lm, newdata=dat_tst)
+}
+
+set.seed(42)
+r <- t(replicate(1e3, FUN()))
+
+head(r, 3)
+
+bootdist <- r[, 'x']
+
+head(bootdist)
+
+hist(bootdist, 'FD', col=4)
+
+# for each model coefficents created, predict new values
+df_r <- data.frame(r)
+
+bs_res <- list()
+for (i in 1:nrow(df_r)){
+  intercept <- df_r[[i,1]]
+  xval <- df_r[[i,2]]
+  
+  lm1$coefficients[1:2] <- c(intercept, xval)
+  print(coef(lm1))
+  vals <- predict(lm1, newdata=dat_tst)
+  dff <- data.frame(model=i,preds=vals)
+  dff$xval <- seq.int(nrow(dff))
+  bs_res[[i]] <- dff
+}
+
+bs_df <- do.call(rbind, bs_res)
+
+# graph these models
+ggplot(bs_df, aes(x=xval,y=preds, group=model))+
+  geom_line(color=bs_df$model)
+
+# boxplot of models
+ggplot(bs_df, aes(x=model,y=preds, group=model))+
+  geom_boxplot()
 
