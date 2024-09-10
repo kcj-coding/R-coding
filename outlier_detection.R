@@ -1,6 +1,10 @@
 library(dplyr)
 library(ggplot2)
 
+gc()
+
+output_folder <- "C:\\Users\\kelvi\\Desktop\\"
+
 dat <- rnorm(90)
 
 df <- data.frame(data=dat)
@@ -127,4 +131,65 @@ ggplot(bs_df, aes(x=xval,y=preds, group=model))+
 # boxplot of models
 ggplot(bs_df, aes(x=model,y=preds, group=model))+
   geom_boxplot()
+
+################################################################################
+
+# from the lm model predictions, create a bootstrap histogram of the expected means
+
+# credit to https://bookdown.org/jgscott/DSGI/the-bootstrap.html
+
+# get unique model number
+unq_mdl <- unique(bs_df$model)
+
+for (mdl in unq_mdl) {
+  bs_df_tst <- bs_df |> filter(model == mdl)
+  
+  mean_val <- mean(bs_df_tst$preds)
+  
+  # bootstrap the mean values
+  FUN <- \() {
+    i <- sample(seq_len(length(bs_df_tst$model)), replace=TRUE)
+    x <- mean(bs_df_tst$preds[i])
+
+  }
+  
+  set.seed(42)
+  r <- t(replicate(1e3, FUN()))
+  
+  head(r, 3)
+  
+  bootdist <- r#[, 'x']
+  
+  # create df of this for geom_histogram
+  df_hist <- data.frame(t(bootdist))
+  
+  # get standard error
+  sd_err <- sd(df_hist$t.bootdist.)
+  
+  # get confidence interval
+  #conf_int <- confint(df_hist, level=0.95)
+  
+  # determine how many values fall within this range
+  val_count <- df_hist |>
+    filter(t.bootdist. > mean_val - sd_err & t.bootdist. < mean_val + sd_err)
+  
+  # as pct
+  pct_val_count <- round((nrow(val_count)/nrow(df_hist))*100,3)
+  
+  # create histogram of this data - base R
+  plot.new()
+  hist(bootdist, 'FD', col=4, main=paste("Model ",mdl," mean: ",round(mean_val,3),sep=""))
+  dev.copy(png, paste(output_folder,"model_",mdl,".png",sep=""))
+  dev.off()
+  
+  # geom_histogram - ggplot (depending upon binwidth, bins etc. can look different due to frequency distributions)
+  ggplot(df_hist,aes(x=t.bootdist.))+
+    geom_histogram(binwidth=0.5, fill="blue", color="black")+
+    geom_vline(xintercept=mean_val+sd_err,color="red")+ # sd error lines
+    geom_vline(xintercept=mean_val-sd_err,color="red")+ # sd error lines
+    labs(x="Preds",y="Frequency",title=paste("Model ",mdl," mean: ",round(mean_val,3)," with ", pct_val_count, "% error lines",sep=""))+
+    theme_classic()
+  
+  ggsave(paste(output_folder,"model_",mdl,"ggplot.png",sep=""), width=30, height=15, units="cm")
+}
 
