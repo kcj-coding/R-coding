@@ -163,8 +163,11 @@ for (mdl in unq_mdl) {
   # create df of this for geom_histogram
   df_hist <- data.frame(t(bootdist))
   
-  # get standard error
+  # get standard error (68%)
   sd_err <- sd(df_hist$t.bootdist.)
+  
+  # get standard error (95%)
+  sd_err_95 <- 2* sd(df_hist$t.bootdist.)
   
   # get confidence interval
   #conf_int <- confint(df_hist, level=0.95)
@@ -173,8 +176,12 @@ for (mdl in unq_mdl) {
   val_count <- df_hist |>
     filter(t.bootdist. > mean_val - sd_err & t.bootdist. < mean_val + sd_err)
   
+  val_count_95 <- df_hist |>
+    filter(t.bootdist. > mean_val - sd_err_95 & t.bootdist. < mean_val + sd_err_95)
+  
   # as pct
   pct_val_count <- round((nrow(val_count)/nrow(df_hist))*100,3)
+  pct_val_count_95 <- round((nrow(val_count_95)/nrow(df_hist))*100,3)
   
   # create histogram of this data - base R
   plot.new()
@@ -185,9 +192,9 @@ for (mdl in unq_mdl) {
   # geom_histogram - ggplot (depending upon binwidth, bins etc. can look different due to frequency distributions)
   ggplot(df_hist,aes(x=t.bootdist.))+
     geom_histogram(binwidth=0.5, fill="blue", color="black")+
-    geom_vline(xintercept=mean_val+sd_err,color="red")+ # sd error lines
-    geom_vline(xintercept=mean_val-sd_err,color="red")+ # sd error lines
-    labs(x="Preds",y="Frequency",title=paste("Model ",mdl," mean: ",round(mean_val,3)," with ", pct_val_count, "% error lines",sep=""))+
+    geom_vline(xintercept=mean_val+sd_err_95,color="red")+ # sd error lines
+    geom_vline(xintercept=mean_val-sd_err_95,color="red")+ # sd error lines
+    labs(x="Preds",y="Frequency",title=paste("Model ",mdl," mean: ",round(mean_val,3)," with ", pct_val_count_95, "% error lines",sep=""))+
     theme_classic()
   
   ggsave(paste(output_folder,"model_",mdl,"ggplot.png",sep=""), width=30, height=15, units="cm")
