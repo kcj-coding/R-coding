@@ -7,9 +7,14 @@ library(stringr)
 # specify folder location
 folder_location <- "C:\\Folder"
 
+# check output folder exists
+if (!file.exists(paste(folder_location,sep=""))){
+  dir.create(file.path(paste(folder_location,sep="")), recursive=TRUE) # recursive to also build any sub-folders
+}
+
 # specify file types
-list_word_files <- list.files(folder_location, pattern="docx|doc") # docx or doc files
-list_pdf_files <- list.files(folder_location, pattern="pdf")
+list_word_files <- list.files(folder_location, pattern=".docx|.doc") # docx or doc files
+list_pdf_files <- list.files(folder_location, pattern=".pdf")
 
 # make initial df for word docs
 word_df <- data.frame()
