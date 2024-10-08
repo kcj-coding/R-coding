@@ -1,12 +1,14 @@
 library(dplyr)
 library(fpp3)
-# install.packahes("urca")
+# install.packages("urca")
 # https://otexts.com/fpp3/
 library(ggplot2)
 
 output_folder <- "C:\\Users\\kelvi\\Desktop\\"
 
 graph_title = "Number by day UK"
+
+rows_to_use <- 5 # use this number of rows from the end of the df for model testing, the rest for model training
 
 # get data in timeseries format - month year, date etc
 
@@ -53,13 +55,15 @@ print(df_eng)
 # view a plot of the timeseries data
 ggplot(df_eng, aes(x=Day, y=Data))+
   geom_line()+
-  labs(x="Day", y="Number", title=graph_title)
+  labs(x="Day", y="Number", title=graph_title) +
+  theme_classic()
 ggsave(paste(output_folder,"basic_graph1.png",sep=""),width=30,height=15,units="cm")
 
 #dev.print(png,paste(output_folder,"chart.png",sep=""),width=1920,height=1080)
 autoplot(df_eng,Data) +
   labs(title = graph_title,
-       y="Number")
+       y="Number") +
+  theme_classic()
 ggsave(paste(output_folder,"basic_graph2.png",sep=""),width=30,height=15,units="cm")
 
 # check for differences, make sure stationary
@@ -73,10 +77,12 @@ df_eng %>%
 ggsave(paste(output_folder,"differences1.png",sep=""),width=30,height=15,units="cm")
 
 # get ACF and PACF plots
-df_eng |> ACF(difference(Data)) |> autoplot()
+df_eng |> ACF(difference(Data)) |> autoplot() +
+  theme_classic()
 ggsave(paste(output_folder,"differences1_acf.png",sep=""),width=30,height=15,units="cm")
 
-df_eng |> PACF(difference(Data)) |> autoplot()
+df_eng |> PACF(difference(Data)) |> autoplot() +
+  theme_classic()
 ggsave(paste(output_folder,"differences1_pacf.png",sep=""),width=30,height=15,units="cm")
 
 # difference again
@@ -87,13 +93,19 @@ df_eng %>%
 ggsave(paste(output_folder,"differences2.png",sep=""),width=30,height=15,units="cm")
 
 # get ACF and PACF plots
-df_eng |> ACF(difference(Data) |> difference()) |> autoplot()
+df_eng |> ACF(difference(Data) |> difference()) |> autoplot() +
+  theme_classic()
 ggsave(paste(output_folder,"differences2_acf.png",sep=""),width=30,height=15,units="cm")
 
-df_eng |> PACF(difference(Data) |> difference()) |> autoplot()
+df_eng |> PACF(difference(Data) |> difference()) |> autoplot() +
+  theme_classic()
 ggsave(paste(output_folder,"differences2_pacf.png",sep=""),width=30,height=15,units="cm")
 
 ################################################################################
+
+########### train test split the data ##########################################
+train <- df_eng[1:(nrow(df_eng)-rows_to_use),]
+test <- df_eng[(nrow(df_eng)-rows_to_use):nrow(df_eng),]
 
 # fit some models - you can either loop through parameters or manually specify some or use automated fitting
 
@@ -102,48 +114,38 @@ d_spec <- 1 # the number of times the data has been differenced
 
 p_try <- seq(0,4,1)
 q_try <- seq(0,4,1)
+P_try <- seq(0,4,1)
+Q_try <- seq(0,4,1)
 
 # store values in list
 p_lst <- list()
 q_lst <- list()
+P_lst <- list()
+Q_lst <- list()
 
 for (i in p_try){
   for (j in q_try){
+    for (ii in P_try){
+      for (jj in Q_try){
     p_lst <- append(p_lst, i)
     q_lst <- append(q_lst, j)
+    P_lst <- append(P_lst, ii)
+    Q_lst <- append(Q_lst, jj)
+      }
+    }
   }
 }
 
-pq_det <- data.frame(p=unlist(p_lst), q=unlist(q_lst))
+pq_det <- data.frame(p=unlist(p_lst), q=unlist(q_lst), P=unlist(P_lst), Q=unlist(Q_lst))
 
 # iterate through different model parameters for P and Q
 # model the data with different model types and pick best fit
 d_spec <- 1 # the number of times the data has been differenced
 
-P_try <- seq(0,4,1)
-Q_try <- seq(0,4,1)
-
-# store values in list
-P_lst <- list()
-Q_lst <- list()
-
-for (i in P_try){
-  for (j in Q_try){
-    P_lst <- append(P_lst, i)
-    Q_lst <- append(Q_lst, j)
-  }
-}
-
-PQ_det <- data.frame(P=unlist(P_lst), Q=unlist(Q_lst))
-
-# combine pq_det and PQ_det
-pq_det <- cbind(pq_det, PQ_det)
-
-
 # store model performance results
 res <- list()
 
-for (i in seq(1,length(pq_det),1)){
+for (i in seq(1,nrow(pq_det),1)){
   tryCatch({
   d_val <- d_spec
   p_val <- pq_det$p[[i]]
@@ -151,7 +153,7 @@ for (i in seq(1,length(pq_det),1)){
   P_val <- pq_det$P[[i]]
   Q_val <- pq_det$Q[[i]]
   
-  model_test <- df_eng %>%
+  model_test <- train %>%
     model(arima = ARIMA(Data ~ pdq(p=p_val,d=d_val,q=q_val) + PDQ(P=P_val,D=d_val,Q=Q_val)))
   
   model_test_res <- model_test %>% pivot_longer(everything(), names_to = "Model name",
@@ -176,6 +178,9 @@ model_results <- do.call(rbind,res)
 # sort AICc desc
 model_results <- model_results %>% arrange(AICc)
 
+# export model results
+write.csv(model_results, paste(output_folder, "model_results.csv", sep = ""), row.names = FALSE)
+
 ################################################################################
 
 # test the fitted model
@@ -184,26 +189,45 @@ model_name_res <- model_res1$.model[[1]]
 
 # get model to use in fit
 
+fit_train <- train %>%
+  model(arima = ARIMA(Data ~ pdq(model_res1$p_val, d_spec,model_res1$q_val)+PDQ(model_res1$P_val, d_spec,model_res1$Q_val)),
+        Naive = NAIVE(Data), Snaive = SNAIVE(Data), Mean = MEAN(Data), Rw = RW(Data ~ drift()))
+
 fit <- df_eng %>%
-  model(arima = ARIMA(Data ~ pdq(model_res1$p_val, d_spec,model_res1$q_val)+PDQ(model_res1$P_val, d_spec,model_res1$Q_val)))
+  model(arima = ARIMA(Data ~ pdq(model_res1$p_val)))
 
 # check acf, residuals, ljung-box
-fit %>% select(arima) %>% gg_tsresiduals(lag=5)
+fit_train %>% select(arima) %>% gg_tsresiduals(lag=5)
 ggsave(paste(output_folder,"residuals_iter.png",sep=""),width=30,height=15,units="cm")
 
-augment(fit) %>%
+augment(fit_train) %>%
   filter(.model == "arima") %>%
   features(.innov, ljung_box, lag=5, dof=4) # dof degrees of freedom to match parameters of model
 
+# get performance of model
+model_perf <- accuracy(fit_train)
+
+# export metrics
+write.csv(model_perf, paste(output_folder, "model_accuracy.csv", sep=""), row.names = FALSE)
+
 ################################################################################
 
-# forecast future values
+# forecast all models
+forecast(fit_train, h=rows_to_use) %>%
+  autoplot(train, level = NULL) + # NULL level to not show confidence intervals
+  autolayer(test, color="black") +
+  guides(colour = guide_legend(title = "Forecast")) +
+  labs(title = graph_title, y="Number") +
+  theme_classic()
+ggsave(paste(output_folder,"forecast_all.png",sep=""),width=30,height=15,units="cm")
 
-forecast(fit, h=36) %>%
+# forecast future values from arima model
+forecast(fit, h=36+rows_to_use) %>%
   filter(.model=='arima') %>%
   autoplot(df_eng) +
   labs(title = paste(graph_title,", ARIMA(",model_res1$p_val, d_spec,model_res1$q_val,")+(",model_res1$P_val, d_spec,model_res1$Q_val,") model", sep=""),
-       y="Number")
+       y="Number") +
+  theme_classic()
 ggsave(paste(output_folder,"forecast_iter.png",sep=""),width=30,height=15,units="cm")
 
 # select best model for fitting
@@ -249,7 +273,8 @@ forecast(fit, h=36) %>%
   filter(.model=='arima210011') %>%
   autoplot(df_eng) +
   labs(title = paste(graph_title,", ARIMA model", sep=""),
-       y="Number")
+       y="Number") +
+  theme_classic()
 ggsave(paste(output_folder,"forecast.png",sep=""),width=30,height=15,units="cm")
 
 ################################################################################
@@ -270,7 +295,8 @@ df_stl %>%
   autolayer(df_eng, Data) +
   guides(colour = "none") +
   labs(title = graph_title,
-       y="Number")
+       y="Number") +
+  theme_classic()
 ggsave(paste(output_folder,"bootstrap_generate.png",sep=""),width=30,height=15,units="cm")
 
 sim <- df_stl %>%
@@ -288,7 +314,8 @@ ets_forecasts %>%
   autolayer(df_eng, Data) +
   guides(colour = "none") +
   labs(title = paste(graph_title,": bootstrapped forecasts", sep=""),
-       y="Number")
+       y="Number") +
+  theme_classic()
 ggsave(paste(output_folder,"bootstrap_forecast.png",sep=""),width=30,height=15,units="cm")
 
 bagged <- ets_forecasts %>%
@@ -300,5 +327,6 @@ df_eng %>%
   autoplot(df_eng) +
   autolayer(bagged, bagged_mean, col = "#D55E00") +
   labs(title = paste(graph_title,", ETS model from bootstrapped averages", sep=""),
-       y="Number")
+       y="Number") +
+  theme_classic()
 ggsave(paste(output_folder,"bagged_bootstrap_forecast.png",sep=""),width=30,height=15,units="cm")
