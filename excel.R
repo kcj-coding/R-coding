@@ -52,6 +52,21 @@ insertImage(wb, "some_sheet", paste(output_folder,"file.png",sep=""), width=30, 
 #writeData(wb,"some_sheet",`df`,startRow=1,startCol=1,borders = "rows", borderStyle = "medium")
 writeDataTable(wb,"some_sheet",`df`,startRow=1,startCol=1,tableStyle="TableStyleMedium1")
 
+# conditional format the data based on values
+# https://ycphs.github.io/openxlsx/articles/Formatting.html
+
+negStyle <- createStyle(fontColour = "#9C0006", bgFill = "#FFC7CE")
+posStyle <- createStyle(fontColour = "#006100", bgFill = "#C6EFCE")
+
+conditionalFormatting(wb, "some_sheet", cols=1, rows=1:11, rule="<=5", style = negStyle)
+conditionalFormatting(wb, "some_sheet", cols=1, rows=1:11, rule=">=0", style = posStyle)
+
+# format the cells below the datatable
+color_cells(wb, "some_sheet", rows = nrow(df)+1:nrow(df)+1 , cols = ncol(df)+1:ncol(df)+1, color = "blue")
+
+setColWidths(wb, "some_sheet", cols = seq_len(ncol(df)), widths = 1.07) # or "auto")
+setRowHeights(wb, "some_sheet", rows = seq_len(nrow(df)), heights = 7.5)
+
 # freeze panes
 freezePane(wb, "some_sheet", firstActiveRow = 2, firstActiveCol = 1)
 

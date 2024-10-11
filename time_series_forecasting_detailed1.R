@@ -210,6 +210,14 @@ model_perf <- accuracy(fit_train)
 # export metrics
 write.csv(model_perf, paste(output_folder, "model_accuracy.csv", sep=""), row.names = FALSE)
 
+# graph these
+ggplot(model_perf, aes(x=.model, y=MAPE)) +
+  geom_col(fill="#1200EE") +
+  geom_text(aes(label=round(MAPE,2)), vjust=-0.5) +
+  labs(x="Model", y="RMSE/%", title="RMSE by model") +
+  theme_classic()
+ggsave(paste(output_folder,"model_rmse.png",sep=""),width=30,height=15,units="cm")
+
 ################################################################################
 
 # forecast all models
