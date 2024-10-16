@@ -83,6 +83,21 @@ df <- replace(df, ok, lapply(df[ok], na.zero))
 # for graphs, use numeric columns only
 df_nums <- df[sapply(df, class) == 'numeric']
 
+# plot all numeric data on histograms
+library(tidyr)
+hists <- df_nums |>
+  pivot_longer(cols = everything(),
+               names_to = "variable",
+               values_to = "value")
+
+ggplot(hists, aes(x=value))+
+  geom_histogram()+
+  facet_wrap(~variable, scales="free", ncol=4)+
+  theme_classic()
+
+
+# then plot individual numeric data
+
 for (i in seq(1, length(df_nums), 1)){
   for (j in seq(1, length(df_nums), 1)){
     if (i != j){
@@ -91,6 +106,8 @@ for (i in seq(1, length(df_nums), 1)){
       ############# linear equation examples for graph #########################
       lm1 <- lm(df_nums[,j] ~ df_nums[,i])
       lm2 <- lm(df_nums[,j] ~ poly(df_nums[,i],3,raw=TRUE))
+      
+      mod <- data.frame(vals=lm1$fitted.values, resid=lm1$residuals, actuals=df_nums[,j])
       
       # lm1 model #############################################
       a = format(unname(coef(lm1)[1]), digits = 2) # intercept
@@ -112,7 +129,7 @@ for (i in seq(1, length(df_nums), 1)){
       # check if folder exists if not create it
       # check/create a folder
       if (!file.exists(paste(output_folder,names(df_nums[i]),sep=""))){
-        dir.create(paste(output_folder,names(df_nums[i]),sep=""))
+        dir.create(paste(output_folder,names(df_nums[i]),sep=""), recursive=TRUE) # recursive to also build any sub-folders
       }
       
       # save base R graph
@@ -131,6 +148,18 @@ for (i in seq(1, length(df_nums), 1)){
         theme(plot.title = element_text(size=12))
       # save
       ggsave(paste(output_folder,names(df_nums[i]),"\\",names(df_nums[i]),"_",names(df_nums[j]),"ggplot_both_plot.png",sep=""),width=30,height=15,units="cm")
+      
+      ########################## lm model residuals graph ######################
+      
+      ggplot(mod, aes(x=vals, y=actuals))+
+        geom_point()+
+        geom_smooth(method=lm, formula=y~x, se=FALSE, color="blue")+
+        theme_classic()+
+        labs(x=names(df_nums[i]), y=names(df_nums[j]), title=paste("Plot of residuals by ", names(df_nums[j]), " || LR: ", "y=",b,"x+",a," r2=",r2,sep=""))+
+        theme(plot.title = element_text(size=12))
+      # save
+      ggsave(paste(output_folder,names(df_nums[i]),"\\",names(df_nums[i]),"_",names(df_nums[j]),"ggplot_residuals.png",sep=""),width=30,height=15,units="cm")
+      
       
       ##########################################################################
       

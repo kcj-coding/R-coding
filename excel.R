@@ -83,3 +83,89 @@ saveWorkbook(wb,file=paste(output_folder,excel_file_name,sep=""),overwrite=TRUE)
 
 ######################## remove locally stored images #########################
 file.remove(paste(output_folder,"file.png",sep=""))
+
+################################################################################
+
+################ load an excel workbook which has formatting and maintain the formatting 
+
+# can use a function iwth openxlsx or use openxlsx2
+
+# https://stackoverflow.com/questions/11228942/write-from-r-into-template-in-excel-while-preserving-formatting
+
+# other info https://stackoverflow.com/questions/75934468/pasting-and-writing-data-onto-existing-excel-file-using-r
+
+# using openxlsx2
+library(openxlsx2)
+
+# load template file
+template_file <- wb_load(paste(output_folder,"theme.xlsx",sep=""), sheet="Sheet1") |>
+  wb_add_data(x = df, sheet="Sheet1") |>
+  wb_save(file=paste(output_folder,"saved_file.xlsx",sep=""))
+
+# using openxlsx
+
+# use function below to copy styling
+copyStyle <- function(from_wb, to_wb, from_sheet, to_sheet) {
+  # check for workbook objects
+  if (!(inherits(from_wb, "Workbook") && inherits(to_wb, "Workbook"))) { 
+    stop("from_wb and to_wb must be Workbook objects.")
+  }
+  
+  # get all sheet names from workbooks
+  from_sheets <- from_wb$sheet_names
+  to_sheets <- to_wb$sheet_names
+  
+  # convert sheets from numeric to sheet name. wb$styleObjects uses sheet name
+  if (is.numeric(from_sheet)) {
+    from_sheet <- from_wb$getSheetName(from_sheet)
+  }
+  
+  if (is.numeric(to_sheet)) { 
+    to_sheet <- to_wb$getSheetName(to_sheet)
+  }
+  
+  # if sheet name given check that it exists
+  if (is.character(from_sheet) && !from_sheet %in% from_sheets) {
+    stop(glue::glue("{from_sheet} was not found in from_wb"))
+  }
+  
+  if (is.character(to_sheet) && !to_sheet %in% to_sheets) {
+    stop(glue::glue("{to_sheet} was not found in to_wb"))
+  }
+  
+  # get from_wb sheet styles
+  from_styles <- purrr::keep(from_wb$styleObjects, ~ .x$sheet == from_sheet)
+  
+  # add styles to to_wb
+  purrr::walk(from_styles, ~ openxlsx::addStyle(to_wb, 
+                                                to_sheet, 
+                                                .x$style, 
+                                                rows = .x$rows, 
+                                                cols = .x$cols))
+  return(to_wb)
+}
+
+# load workbook
+template_file1 <- loadWorkbook(paste(output_folder,"theme.xlsx",sep=""))
+
+# create workbook to save
+wb1 <- createWorkbook()
+addWorksheet(wb1, "some_sheet")
+
+# apply styling to this workbook
+writeData(wb1,"some_sheet",`df`,startRow=1,startCol=1)
+
+copyStyle(from_wb = template_file1, to_wb = wb1, from_sheet = "Sheet1", to_sheet = 1)
+
+# save the workbook
+saveWorkbook(wb1,file=paste(output_folder,"saved_file1.xlsx",sep=""),overwrite=TRUE)
+
+#################### or, more easily
+# load workbook
+template_file1 <- loadWorkbook(paste(output_folder,"theme.xlsx",sep=""))
+
+# apply styling to this workbook
+writeData(template_file1,"Sheet1",`df`,startRow=1,startCol=1) # name of worksheet in template_file1
+
+# save the workbook
+saveWorkbook(wb1,file=paste(output_folder,"saved_file11.xlsx",sep=""),overwrite=TRUE)

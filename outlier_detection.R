@@ -186,7 +186,36 @@ for (mdl in unq_mdl) {
   # create histogram of this data - base R
   plot.new()
   hist(bootdist, 'FD', col=4, main=paste("Model ",mdl," mean: ",round(mean_val,3),sep=""))
-  dev.copy(png, paste(output_folder,"model_",mdl,".png",sep=""))
+  dev.copy(png, paste(output_folder,"model_",mdl,"_hist.png",sep=""))
+  dev.off()
+  
+  # create boxplot - base R
+  plot.new()
+  boxplot(bootdist, notch = TRUE, horizontal = TRUE, main=paste("Model ",mdl," mean: ",round(mean_val,3),sep=""))
+  dev.copy(png, paste(output_folder,"model_",mdl,"_boxplot.png",sep=""))
+  dev.off()
+  
+  # create probability density plot - base R
+  plot.new()
+  hist(bootdist, freq=FALSE, col=4, main=paste("Model ",mdl," mean: ",round(mean_val,3),sep=""))
+  lines(density(bootdist), lwd=2)
+  lines(density(bootdist, adj=.5), lwd=1)
+  lines(density(bootdist, adj=2), lwd=1.5)
+  dev.copy(png, paste(output_folder,"model_",mdl,"_prob.png",sep=""))
+  dev.off()
+  
+  # create qq plot - base R
+  plot.new()
+  qqnorm(bootdist, main=paste("Model ",mdl," mean: ",round(mean_val,3),sep=""))
+  qqline(bootdist, col=4)
+  dev.copy(png, paste(output_folder,"model_",mdl,"_qq.png",sep=""))
+  dev.off()
+  
+  # create log qq plot - base R
+  plot.new()
+  qqnorm(log(bootdist), main=paste("Model ",mdl," mean: ",round(mean_val,3),sep=""))
+  qqline(log(bootdist), col=4)
+  dev.copy(png, paste(output_folder,"model_",mdl,"_logqq.png",sep=""))
   dev.off()
   
   # geom_histogram - ggplot (depending upon binwidth, bins etc. can look different due to frequency distributions)
