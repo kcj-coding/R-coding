@@ -194,7 +194,7 @@ fit_train <- train %>%
         Naive = NAIVE(Data), Snaive = SNAIVE(Data), Mean = MEAN(Data), Rw = RW(Data ~ drift()))
 
 fit <- df_eng %>%
-  model(arima = ARIMA(Data ~ pdq(model_res1$p_val)))
+  model(arima = ARIMA(Data ~ pdq(model_res1$p_val, d_spec,model_res1$q_val)+PDQ(model_res1$P_val, d_spec,model_res1$Q_val)))
 
 # check acf, residuals, ljung-box
 fit_train %>% select(arima) %>% gg_tsresiduals(lag=5)
@@ -230,7 +230,7 @@ forecast(fit_train, h=rows_to_use) %>%
 ggsave(paste(output_folder,"forecast_all.png",sep=""),width=30,height=15,units="cm")
 
 # forecast future values from arima model
-forecast(fit, h=36+rows_to_use) %>%
+forecast(fit, h=36) %>%
   filter(.model=='arima') %>%
   autoplot(df_eng) +
   labs(title = paste(graph_title,", ARIMA(",model_res1$p_val, d_spec,model_res1$q_val,")+(",model_res1$P_val, d_spec,model_res1$Q_val,") model", sep=""),

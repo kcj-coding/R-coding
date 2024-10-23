@@ -164,8 +164,8 @@ saveWorkbook(wb1,file=paste(output_folder,"saved_file1.xlsx",sep=""),overwrite=T
 # load workbook
 template_file1 <- loadWorkbook(paste(output_folder,"theme.xlsx",sep=""))
 
-# apply styling to this workbook
+# add df to this already formatted workbook
 writeData(template_file1,"Sheet1",`df`,startRow=1,startCol=1) # name of worksheet in template_file1
 
-# save the workbook
+# save the workbook with a new name
 saveWorkbook(wb1,file=paste(output_folder,"saved_file11.xlsx",sep=""),overwrite=TRUE)
