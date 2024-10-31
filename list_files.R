@@ -1,4 +1,4 @@
-folder <- r"[C:\Users\janan\Desktop]"
+folder <- r"[C:\Users\kelvi\Desktop]"
 
 files <- list.files(folder, full.names = TRUE, recursive = TRUE) # recursive for all sub-folders
 
