@@ -1,7 +1,9 @@
 #library(tidyverse)
 library(dplyr)
-library(ggplot2)
 library(summarytools)
+library(ggplot2)
+library(patchwork)
+
 
 
 data <- c(1,2,3,4,5,6,7,8,9,10)
@@ -19,6 +21,20 @@ view(summarytools::dfSummary(df))
 # histogram of numeric values
 df_hist <- df[, sapply(df, class) == 'numeric']
 hist(unlist(df_hist))
+
+# plot all numeric data on histograms
+library(tidyr)
+if (!is.null(ncol(df_hist))){
+  hists <- df_hist |>
+    pivot_longer(cols = everything(),
+                 names_to = "variable",
+                 values_to = "value")
+  
+  ggplot(hists, aes(x=value))+
+    geom_histogram()+
+    facet_wrap(~variable, scales="free", ncol=4)+
+    theme_classic()
+}
 
 # add a column for the number of instances
 df$number <- 1
@@ -47,11 +63,22 @@ df <- df[!duplicated(df$data, fromLast = TRUE), ]
 # order df by data column
 df <- df[order(df$data, decreasing = FALSE), ]
 
+# rank by col1
+df$rank <- NA # initialise as NA
+df$rank[order(-df$col1)] <- 1:nrow(df$col1)
+
 # rename specific column
 colnames(df)[colnames(df) == "pct_v"] <- "pct_t"
 
+# query loop based on column name
+col_names <- c("col1")
+for (i in col_names){
+  mutate(!!i := as.numeric(!!as.name(i)))
+}
+
 # new column with previous values, lag for prv, lead for next
 df$prv_data <- lag(df$data, n=1, default=0) # default for setting any NA or missing values
+
 
 # get top 10
 df_top10 <- df[1:10,]
@@ -65,6 +92,26 @@ df_unused <- data.frame(col1=data,col2=c(50,50,50,50,50,50,50,50,50,50))
 
 df_unused <- left_join(df_unused, df, by=c("col1"="data"))
 
+# countif function like excel
+vector_count <- function(df1,df2){
+  store <- vector()
+  counts_nbr <- vector()
+  items <- unique(df1)
+  for (i in 1:length(items)){
+    i <- df1[i]
+    cnt <- sum(df2 == i)
+    
+    store[i] <- i
+    counts_nbr[i] <- cnt
+  }
+  
+  df <- data.frame(item=store, counts=counts_nbr)
+  return(df)
+}
+
+# count df_unused col1 in df typer
+df_count <- vector_count(df_unused$col1, df$typer)
+
 ################################################################################
 
 # bar graph
@@ -72,7 +119,7 @@ df_unused <- left_join(df_unused, df, by=c("col1"="data"))
 grptt=paste("title",sep="")
 
 #create line graph
-ggplot(df,aes(x=factor(data),y=`data`, fill=`type`))+
+bg <- ggplot(df,aes(x=factor(data),y=`data`, fill=`type`))+
   geom_bar(aes(fill=`type`),position="dodge",stat="identity",width=0.5)+
   #scale_x_date(date_labels="%d/%m/%Y",date_breaks="1 week")+ #can be 1 day, 1 week, 1 month
   geom_text(aes(label=round(`data`,0)),position=position_dodge(width=.9),vjust=-0.5,size=1.5)+
@@ -95,6 +142,7 @@ ggplot(df,aes(x=factor(data),y=`data`, fill=`type`))+
 #save graph
 #ggsave(path="C:\\",svname,height=15,width=30,units="cm")
 
+bg
 ################################################################################
 
 # line graph
@@ -114,7 +162,7 @@ data_ends <- df %>%
 #geom_text(data=data_ends,aes(label=round(`yvalue`,0)),vjust=-0.5,size=2.5)+
 
 #create line graph
-ggplot(df,aes(x=`row_nums_same`,y=`c_number`, group=`type`, color=`type`))+
+ln <- ggplot(df,aes(x=`row_nums_same`,y=`c_number`, group=`type`, color=`type`))+
   #ggplot(df,aes(x=`row_nums_same`,y=`c_number`, group=1, color=1))+  # single line only
   geom_line()+
   #scale_x_date(date_labels="%d/%m/%Y",date_breaks="1 week")+ #can be 1 day, 1 week, 1 month
@@ -140,6 +188,13 @@ ggplot(df,aes(x=`row_nums_same`,y=`c_number`, group=`type`, color=`type`))+
 
 #save graph
 #ggsave(path="C:\\",svname,height=15,width=30,units="cm")
+
+ln
+
+#################### patchwork to combine graphs ###############################
+
+(ln+bg)
+(ln/bg)
 
 ################################################################################
 # line graph with only 1 line coloured
@@ -255,7 +310,7 @@ dater_filtered <- dater %>%
 
 # make a df of time between 00:00 and 23:00 (every hour)
 #start_time <- as.POSIXct("00:00")
-  
+
 # https://stackoverflow.com/questions/12649641/calculating-time-difference-in-r
 # https://stackoverflow.com/questions/11666172/calculating-number-of-days-between-2-columns-of-dates-in-data-frame
 # https://stackoverflow.com/questions/6871016/adding-days-to-a-date-in-python  
@@ -282,4 +337,3 @@ dater$num <- 1
 ggplot(dater,aes(date,num))+
   geom_point()+
   scale_x_date(date_labels="%d-%m",date_breaks  ="3 days") # days, months, years
-
