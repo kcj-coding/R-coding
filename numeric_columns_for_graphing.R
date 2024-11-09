@@ -140,25 +140,25 @@ for (i in seq(1, length(df_nums), 1)){
       
       ################## ggplot graph ##########################################
       ggplot(df_nums, aes(x=df_nums[,i], y=df_nums[,j]))+
-        geom_point()+
+        geom_point(alpha=0.1)+
         geom_smooth(method=lm, formula=y~x, se=FALSE, color="blue")+
         geom_smooth(method=lm, formula=y~splines::bs(x,3), se=FALSE, color="red")+
         theme_classic()+
         labs(x=names(df_nums[i]), y=names(df_nums[j]), title=paste("Plot of ",names(df_nums[i]), " by ", names(df_nums[j]), " || LR: ", "y=",b,"x+",a," r2=",r2, " || PY: ", "y=",bp,"x+",bp2,"x2+",bp3,"x3+",ap," r2=",r2p,sep=""))+
         theme(plot.title = element_text(size=12))
       # save
-      ggsave(paste(output_folder,names(df_nums[i]),"\\",names(df_nums[i]),"_",names(df_nums[j]),"ggplot_both_plot.png",sep=""),width=30,height=15,units="cm")
+      ggsave(paste(output_folder,names(df_nums[i]),"\\",names(df_nums[i]),"_",names(df_nums[j]),"ggplot_both_plot.png",sep=""),width=30,height=15,units="cm", dpi=128)
       
       ########################## lm model residuals graph ######################
       
       ggplot(mod, aes(x=vals, y=actuals))+
-        geom_point()+
+        geom_point(alpha=0.1)+
         geom_smooth(method=lm, formula=y~x, se=FALSE, color="blue")+
         theme_classic()+
         labs(x=names(df_nums[i]), y=names(df_nums[j]), title=paste("Plot of residuals by ", names(df_nums[j]), " || LR: ", "y=",b,"x+",a," r2=",r2,sep=""))+
         theme(plot.title = element_text(size=12))
       # save
-      ggsave(paste(output_folder,names(df_nums[i]),"\\",names(df_nums[i]),"_",names(df_nums[j]),"ggplot_residuals.png",sep=""),width=30,height=15,units="cm")
+      ggsave(paste(output_folder,names(df_nums[i]),"\\",names(df_nums[i]),"_",names(df_nums[j]),"ggplot_residuals.png",sep=""),width=30,height=15,units="cm", dpi=128)
       
       
       ##########################################################################
@@ -189,12 +189,12 @@ for (i in seq(1, length(df_nums), 1)){
         dfx$cluster_id <- factor(km.out$cluster)
         
         ggplot(dfx, aes(x=dfx[,1], y=dfx[,2], color = cluster_id))+
-          geom_point()+
+          geom_point(alpha=0.1)+
           theme_classic()+
           labs(x=names(df_nums[i]), y=names(df_nums[j]), title=paste("Plot of ",names(df_nums[i]), " by ", names(df_nums[j]), sep=""))+
           theme(plot.title = element_text(size=12))
         # save
-        ggsave(paste(output_folder,names(df_nums[i]),"\\",names(df_nums[i]),"_",names(df_nums[j]),"_cluster_ggplot_both_plot.png",sep=""),width=30,height=15,units="cm")
+        ggsave(paste(output_folder,names(df_nums[i]),"\\",names(df_nums[i]),"_",names(df_nums[j]),"_cluster_ggplot_both_plot.png",sep=""),width=30,height=15,units="cm", dpi=128)
       }, error = function(e) e)
     }
   }
