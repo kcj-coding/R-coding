@@ -84,6 +84,11 @@ df$prv_data <- lag(df$data, n=1, default=0) # default for setting any NA or miss
 df_top10 <- df[1:10,]
 
 # filter type to examples containing a
+
+# filter using subset - faster but more difficult to read
+df_a <- df[grepl("a",df$type),]
+
+# filter using dplyr and filter - easier to read but slower than subsetting
 df_a <- df %>%
   filter(grepl("a",df$type))
 
