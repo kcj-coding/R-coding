@@ -118,4 +118,12 @@ nbr_match <- str_extract_all(string6, "(\\d+)(?=\\D+\\:)")
 
 ################################################################################
 
-# In R, if using strsplit you may need to use perl = TRUE e.g. txt_split <- strsplit(string6, "(\\d+)(?=\\D+\\:)", perl = TRUE)
+string7 <- r"[C:\\Folder\File.xyz]" # read folder location and file
+
+# get the file extension
+file_ext <- str_extract_all(string7, "(\\.[^.]+)$")
+file_ext_gsub <- gsub("(.+?)(?=\\.[^.]*$)", "", string7, perl=TRUE) # replace everything that is not found in the match (file extension)
+
+################################################################################
+
+# In R, if using strsplit or gsub you may need to use perl = TRUE e.g. txt_split <- strsplit(string6, "(\\d+)(?=\\D+\\:)", perl = TRUE) or gsub("([^0-9a-zA-Z])+", " ", string, perl=TRUE)
