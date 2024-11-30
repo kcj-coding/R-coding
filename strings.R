@@ -124,6 +124,14 @@ string7 <- r"[C:\\Folder\File.xyz]" # read folder location and file
 file_ext <- str_extract_all(string7, "(\\.[^.]+)$")
 file_ext_gsub <- gsub("(.+?)(?=\\.[^.]*$)", "", string7, perl=TRUE) # replace everything that is not found in the match (file extension)
 
+# get the filename
+filename <- str_extract_all(string7, "([\\w]+(?!\\\\)\\.\\w+)$")
+filename_gsub <- gsub("(\\w.*)(?<=\\\\)", "", string7, perl=TRUE) # \\\\ for \\ in R, \w is \\w
+
+# get the folder
+folder <- str_extract_all(string7, "")
+folder_gsub <- gsub("(?<=\\\\)(\\w[^\\\\]+)$", "", string7, perl=TRUE) # capture anything that is not followed by \ and has \ in front of it
+folder_gsub <- gsub("(\\w[^\\\\]+)$", "", string7, perl=TRUE)  # \\\\ for \\ in R, \w is \\w
 ################################################################################
 
 # In R, if using strsplit or gsub you may need to use perl = TRUE e.g. txt_split <- strsplit(string6, "(\\d+)(?=\\D+\\:)", perl = TRUE) or gsub("([^0-9a-zA-Z])+", " ", string, perl=TRUE)
