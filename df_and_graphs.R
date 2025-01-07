@@ -92,6 +92,19 @@ df_a <- df[grepl("a",df$type),]
 df_a <- df %>%
   filter(grepl("a",df$type))
 
+# note, for grepl searching for pattern within x, "a" within a column is fine but you cannot search column within a column, instead you would need to iterate through the rows
+d <- list()
+for (i in nrow(df_a)){
+  df_chk <- df_a[,i]
+
+  datad <- df_chk[grepl(substr(df_chk$type,1,1), df_chk$type),]
+
+  d[[i]] <- datad
+  
+}
+
+dfs <- do.call(rbind,d)
+
 # make another, unused dataframe and join the first dataframe onto this second dataframe
 df_unused <- data.frame(col1=data,col2=c(50,50,50,50,50,50,50,50,50,50))
 
