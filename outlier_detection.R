@@ -3,9 +3,9 @@ library(ggplot2)
 
 gc()
 
-output_folder <- "C:\\Users\\kelvi\\Desktop\\"
+output_folder <- "C:\\Users\\kelvi\\Desktop\\outliers\\"
 
-dat <- rnorm(90)
+dat <- abs(rnorm(90))
 
 df <- data.frame(data=dat)
 df$dat <- df$dat * 1e2
@@ -26,6 +26,8 @@ ggplot(df, aes(df$xdata, df$dat, color=df$chk))+
   geom_hline(yintercept=(mean-(2*sd)), color="blue")+
   theme_classic()+
   labs(x="Datapoint", y="Number", color="Type")
+
+ggsave(paste(output_folder,"1data_ggplot.png",sep=""), width=30, height=15, units="cm")
 
 ################################################################################
 
@@ -63,6 +65,8 @@ ggplot(df, aes(xdata, dat, color=exp_val))+
   geom_line(aes(df$xdata,-(df$exp)*5), color="blue")+
   theme_classic()+
   labs(x="Datapoint", y="Number", title=paste("LR: ", "y=",b,"x+",a," r2=",r2,sep=""), color="Type")
+
+ggsave(paste(output_folder,"2data_ggplot.png",sep=""), width=30, height=15, units="cm")
 
 ################################################################################
 
@@ -126,11 +130,24 @@ bs_df <- do.call(rbind, bs_res)
 
 # graph these models
 ggplot(bs_df, aes(x=xval,y=preds, group=model))+
-  geom_line(color=bs_df$model)
+  geom_line(color=bs_df$model)+
+  theme_classic()
+
+ggsave(paste(output_folder,"3data_ggplot.png",sep=""), width=30, height=15, units="cm")
 
 # boxplot of models
 ggplot(bs_df, aes(x=model,y=preds, group=model))+
-  geom_boxplot()
+  geom_boxplot()+
+  theme_classic()
+
+ggsave(paste(output_folder,"4data_ggplot.png",sep=""), width=30, height=15, units="cm")
+
+# boxplot of models - top 100
+ggplot(bs_df[1:1000,], aes(x=model,y=preds, group=model))+
+  geom_boxplot()+
+  theme_classic()
+
+ggsave(paste(output_folder,"4data_top100_ggplot.png",sep=""), width=30, height=15, units="cm")
 
 ################################################################################
 
@@ -139,7 +156,7 @@ ggplot(bs_df, aes(x=model,y=preds, group=model))+
 # credit to https://bookdown.org/jgscott/DSGI/the-bootstrap.html
 
 # get unique model number
-unq_mdl <- unique(bs_df$model)
+unq_mdl <- unique(bs_df$model)[1:5] # limit to first 5
 
 for (mdl in unq_mdl) {
   bs_df_tst <- bs_df |> filter(model == mdl)
@@ -150,7 +167,7 @@ for (mdl in unq_mdl) {
   FUN <- \() {
     i <- sample(seq_len(length(bs_df_tst$model)), replace=TRUE)
     x <- mean(bs_df_tst$preds[i])
-
+    
   }
   
   set.seed(42)
@@ -195,6 +212,13 @@ for (mdl in unq_mdl) {
   dev.copy(png, paste(output_folder,"model_",mdl,"_boxplot.png",sep=""))
   dev.off()
   
+  # create boxplot - base R - 10% of observations
+  ten_pct <- 0.1*length(bootdist)
+  plot.new()
+  boxplot(bootdist[1:ten_pct], notch = TRUE, horizontal = TRUE, main=paste("Model ",mdl," mean: ",round(mean_val,3),sep=""))
+  dev.copy(png, paste(output_folder,"model_",mdl,"_10pc_boxplot.png",sep=""))
+  dev.off()
+  
   # create probability density plot - base R
   plot.new()
   hist(bootdist, freq=FALSE, col=4, main=paste("Model ",mdl," mean: ",round(mean_val,3),sep=""))
@@ -218,14 +242,32 @@ for (mdl in unq_mdl) {
   dev.copy(png, paste(output_folder,"model_",mdl,"_logqq.png",sep=""))
   dev.off()
   
+  # geom_scatter - ggplot
+  ggplot(df_hist,aes(x=t.bootdist., y=t.bootdist.))+
+    geom_point()+
+    labs(x="Preds",y="Frequency",title=paste("Model ",mdl,sep=""))+
+    theme_classic()
+  
+  ggsave(paste(output_folder,"model_",mdl,"scatter_ggplot.png",sep=""), width=30, height=15, units="cm")
+  
   # geom_histogram - ggplot (depending upon binwidth, bins etc. can look different due to frequency distributions)
   ggplot(df_hist,aes(x=t.bootdist.))+
     geom_histogram(binwidth=0.5, fill="blue", color="black")+
+    geom_density()+
     geom_vline(xintercept=mean_val+sd_err_95,color="red")+ # sd error lines
     geom_vline(xintercept=mean_val-sd_err_95,color="red")+ # sd error lines
     labs(x="Preds",y="Frequency",title=paste("Model ",mdl," mean: ",round(mean_val,3)," with ", pct_val_count_95, "% error lines",sep=""))+
     theme_classic()
   
   ggsave(paste(output_folder,"model_",mdl,"ggplot.png",sep=""), width=30, height=15, units="cm")
+  
+  ggplot(df_hist,aes(x=t.bootdist.,y=after_stat(density)))+
+    geom_histogram(binwidth=0.5, fill="blue", color="black")+
+    geom_density(bounds = c(1, Inf), color="black")+
+    geom_vline(xintercept=mean_val+sd_err_95,color="red")+ # sd error lines
+    geom_vline(xintercept=mean_val-sd_err_95,color="red")+ # sd error lines
+    labs(x="Preds",y="Frequency",title=paste("Model ",mdl," mean: ",round(mean_val,3)," with ", pct_val_count_95, "% error lines",sep=""))+
+    theme_classic()
+  
+  ggsave(paste(output_folder,"model_",mdl,"xtra_ggplot.png",sep=""), width=30, height=15, units="cm")
 }
-
