@@ -12,6 +12,22 @@ typer <- c("a","b","a","b","a","b","a","b","a","b")
 # make a dataframe
 df <- data.frame(data=data, type=typer)
 
+# apply a function to the dataframe
+test <- function(x,y){
+  if(x > y){
+    #val <- "yes"
+    "yes"
+  }
+  
+  else{
+    #val <- "no"
+    "no"
+  }
+  #return (val)
+}
+
+df$zz <- mapply(test, df$data, lead(df$data,1,0)) # apply a function and use specified arguments in function
+
 # get summary
 df_summary = as.data.frame(summary(df))
 
