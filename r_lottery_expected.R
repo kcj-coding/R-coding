@@ -8,6 +8,11 @@ library(ggplot2)
 
 #r_dat <- data.frame(a=rnorm(90),b=rnorm(90))
 
+#hist(r_dat$a, freq=FALSE)
+#lines(x=density(x=r_dat$a), col="red")
+#abline(v=mean(r_dat$a), col="red", lwd=2, lty='dashed')
+#abline(v=median(r_dat$a), col="blue", lwd=2, lty='dashed')
+
 # summary of df
 #r_dat_summary <- summary(r_dat)
 
