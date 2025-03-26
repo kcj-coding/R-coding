@@ -4,6 +4,14 @@ library(tibble)
 library(readxl)
 library(ggplot2)
 
+#r_df <- data.frame(a=rnorm(90), b=rnorm(90), c=rep(c("a","b"),times=45))
+
+#r_df <- r_df |>
+#  group_by(c) |>
+#  mutate(cc=cumsum(a))|>
+#  ungroup()
+
+# https://socviz.co/refineplots.html
 # https://intro2r.com/the-start-of-the-end.html
 
 #r_dat <- data.frame(a=rnorm(90),b=rnorm(90))
