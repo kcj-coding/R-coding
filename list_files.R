@@ -4,7 +4,7 @@ folder <- r"[C:\Users\kelvi\Desktop]"
 
 files <- list.files(folder, full.names = TRUE, recursive = TRUE) # recursive for all sub-folders
 
-df <- data.frame(folder=gsub("[^/]*$","",files), file=gsub("(?=^||\\/).*(\\/)","",files, perl=TRUE), file_link=files, file_ext = gsub(".*(?<=\\.)","",files, perl=TRUE))
+df <- data.frame(folder=gsub("[^/]*$","",files), file=gsub("(?=^||\\/).*(\\/)","",files, perl=TRUE), file_link=files, file_ext = gsub("(.+?)(?=\\.[^.]*$)","",files, perl=TRUE))
 
 #file_mod <- fs::file_info(paste(df$file_link))
 
