@@ -9,6 +9,8 @@ gc()
 start_time <- Sys.time()
 run_kmeans <- FALSE
 
+corr_threshold <- 0.001
+
 #setwd("C:\\Users\\kelvi\\Desktop")
 folder <- r"[C:\Users\kelvi\Desktop\xyz]"
 output_folder <- r"[C:\Users\kelvi\Desktop\xyz\Graphs]"
@@ -22,8 +24,30 @@ for (folder_location in folder_locations){
   }
 }
 
-data <- c(1,2,3,4,5,6,7,8,9,10)
-typer <- c("a","b","a","b","a","b","a","b","a","b")
+number_format <- function(num){
+  if (num > 0){
+    digits <- floor(log10(num)) + 1
+  }
+  else if (num == 0){
+    digits <- 1
+  }
+  else{
+    digits <- floor(log10(abs(num))) + 1
+  }
+
+  if (digits > 3 | digits < 0){
+    value <- formatC(num, format = "e", digits = 2)
+    value <- sprintf("%.1e", num)
+  }
+  else {
+    value <- format(num, digits=2)
+  }
+  return (value)
+}
+tst <- number_format(505.5678)
+tst1 <- number_format(0.000012345)
+data <- 1:10#c(1,2,3,4,5,6,7,8,9,10)
+typer <- rep(c("a","b"),times=5)#c("a","b","a","b","a","b","a","b","a","b")
 
 # make a dataframe
 df <- data.frame(data=data, type=typer)
@@ -35,65 +59,69 @@ write.csv(varsum, file = paste(folder,"\\",'varsum.csv',sep=""),row.names=FALSE)
 # get all non numeric columns
 df_chr <- df[sapply(df, class) != 'numeric']
 
-# fill any chr NA with 0
-chr.zero <- function(x) replace(x, is.na(x), "Unknown")
-ok <- sapply(df_chr, is.character)
-df_chr <- replace(df_chr, ok, lapply(df_chr[ok], chr.zero))
+# if the length of df_chr > 0
+if (length(df_chr) > 0){
 
-# function from https://stackoverflow.com/questions/6988184/combining-two-data-frames-of-different-lengths
-cbindPad <- function(...){
-  args <- list(...)
-  n <- sapply(args,nrow)
-  mx <- max(n)
-  pad <- function(x, mx){
-    if (nrow(x) < mx){
-      nms <- colnames(x)
-      padTemp <- matrix(NA, mx - nrow(x), ncol(x))
-      colnames(padTemp) <- nms
-      if (ncol(x)==0) {
-        return(padTemp)
-      } else {
-        return(rbind(x,padTemp))
+  # fill any chr NA with 0
+  chr.zero <- function(x) replace(x, is.na(x), "Unknown")
+  ok <- sapply(df_chr, is.character)
+  df_chr <- replace(df_chr, ok, lapply(df_chr[ok], chr.zero))
+  
+  # function from https://stackoverflow.com/questions/6988184/combining-two-data-frames-of-different-lengths
+  cbindPad <- function(...){
+    args <- list(...)
+    n <- sapply(args,nrow)
+    mx <- max(n)
+    pad <- function(x, mx){
+      if (nrow(x) < mx){
+        nms <- colnames(x)
+        padTemp <- matrix(NA, mx - nrow(x), ncol(x))
+        colnames(padTemp) <- nms
+        if (ncol(x)==0) {
+          return(padTemp)
+        } else {
+          return(rbind(x,padTemp))
+        }
+      }
+      else{
+        return(x)
       }
     }
-    else{
-      return(x)
-    }
+    rs <- lapply(args,pad,mx)
+    return(do.call(cbind,rs))
   }
-  rs <- lapply(args,pad,mx)
-  return(do.call(cbind,rs))
+  
+  # for these, make 2 new columns in df which represent the character and factor conversions
+  #dfs = data.frame()
+  #dfs <- data.frame(testcol=1:nrow(df_chr))
+  d <- list()
+  for (i in seq(1, length(df_chr),1)){
+    df_chk <- df_chr[,i]
+    name1 <- names(df_chr[i])
+    name2 <- paste(name1,"_fct",sep="")
+    # get character and factor, and append to df
+    datad <- data.frame(dat=df_chk[[1]], fct=as.numeric(factor(df_chk[[1]])))
+    
+    # rename columns
+    colnames(datad) <- c(name1,name2)
+    
+    #dfs <- cbindPad(dfs,datad)
+    #dfs <- cbind(dfs, datad)
+    d[[i]] <- datad
+    
+  }
+  
+  #dfs <- select(dfs, -testcol)
+  dfs <- do.call(cbind,d)
+  
+  # remove all character columns from original df and add on these generated columns
+  
+  # Get all numeric columns
+  df <- df[sapply(df, class) == 'numeric']
+  
+  # join on created data
+  df <- cbind(df, dfs)
 }
-
-# for these, make 2 new columns in df which represent the character and factor conversions
-#dfs = data.frame()
-#dfs <- data.frame(testcol=1:nrow(df_chr))
-d <- list()
-for (i in seq(1, length(df_chr),1)){
-  df_chk <- df_chr[,i]
-  name1 <- names(df_chr[i])
-  name2 <- paste(name1,"_fct",sep="")
-  # get character and factor, and append to df
-  datad <- data.frame(dat=df_chk[[1]], fct=as.numeric(factor(df_chk[[1]])))
-  
-  # rename columns
-  colnames(datad) <- c(name1,name2)
-  
-  #dfs <- cbindPad(dfs,datad)
-  #dfs <- cbind(dfs, datad)
-  d[[i]] <- datad
-  
-}
-
-#dfs <- select(dfs, -testcol)
-dfs <- do.call(cbind,d)
-
-# remove all character columns from original df and add on these generated columns
-
-# Get all numeric columns
-df <- df[sapply(df, class) == 'numeric']
-
-# join on created data
-df <- cbind(df, dfs)
 
 # fill any numeric NA with 0
 na.zero <- function(x) replace(x, is.na(x), 0)
@@ -183,7 +211,7 @@ for (i in seq(1, length(df_nums), 1)){
   
   # create boxplot - base R
   plot.new()
-  boxplot(vv, notch = TRUE, horizontal = TRUE, main=paste(names(df_nums[i])," mean: ",round(mean_val,3),sep=""))
+  boxplot(vv, notch = TRUE, horizontal = TRUE, main=paste(names(df_nums[i])," mean: ",number_format(mean_val),sep=""))
   dev.copy(png, paste(output_folder,"//",names(df_nums[i]),"\\","column data","\\",names(df_nums[i]),"_boxplot.png",sep=""))
   dev.off()
   
@@ -196,7 +224,7 @@ for (i in seq(1, length(df_nums), 1)){
   
   # create probability density plot - base R
   plot.new()
-  hist(vv, freq=FALSE, col=4, main=paste(names(df_nums[i])," mean: ",round(mean_val,3)," with ", pct_val_count_95, "% error lines", sep=""))
+  hist(vv, freq=FALSE, col=4, main=paste(names(df_nums[i])," mean: ",number_format(mean_val)," with ", pct_val_count_95, "% error lines", sep=""))
   lines(density(vv), lwd=2)
   abline(v=mean_val+sd_err_95,lty=2,col="red")
   abline(v=mean_val-sd_err_95,lty=2,col="red")
@@ -207,7 +235,7 @@ for (i in seq(1, length(df_nums), 1)){
   
   # create qq plot - base R
   plot.new()
-  qqnorm(vv, main=paste(names(df_nums[i])," mean: ",round(mean_val,3),sep=""))
+  qqnorm(vv, main=paste(names(df_nums[i])," mean: ",number_format(mean_val),sep=""))
   qqline(vv, col=4)
   dev.copy(png, paste(output_folder,"//",names(df_nums[i]),"\\","column data","\\",names(df_nums[i]),"_qq.png",sep=""))
   dev.off()
@@ -257,7 +285,7 @@ for (i in seq(1, length(df_nums), 1)){
     if (i != j){
       corr_scor <- d2[(d2$var2==name1 & d2$var1==name2),]
       corr_scor <- corr_scor$value[[1]]
-      if (i != j & !is.na(corr_scor)){
+      if ((i != j & !is.na(corr_scor)) & (corr_threshold >= abs(corr_scor))){
         ##########################################################################
         
         ############# linear equation examples for graph #########################
@@ -267,16 +295,16 @@ for (i in seq(1, length(df_nums), 1)){
         mod <- data.frame(vals=lm1$fitted.values, resid=lm1$residuals, actuals=df_nums[,j])
         
         # lm1 model #############################################
-        a = format(unname(coef(lm1)[1]), digits = 2) # intercept
-        b = format(unname(coef(lm1)[2]), digits = 2) # bx term
-        r2 = format(summary(lm1)$r.squared, digits = 3) # r-squared
+        a = unname(coef(lm1)[1])#format(unname(coef(lm1)[1]), digits = 2) # intercept
+        b = unname(coef(lm1)[2])#format(unname(coef(lm1)[2]), digits = 2) # bx term
+        r2 = summary(lm1)$r.squared#format(summary(lm1)$r.squared, digits = 3) # r-squared
         
         # lm2 model #############################################
-        ap = format(unname(coef(lm2)[1]), digits = 2) # intercept
-        bp = format(unname(coef(lm2)[2]), digits = 2) # bx term
-        bp2 = format(unname(coef(lm2)[3]), digits = 2) # bx2 term
-        bp3 = format(unname(coef(lm2)[4]), digits = 2) # bx3 term
-        r2p = format(summary(lm2)$r.squared, digits = 3) # r-squared
+        ap = unname(coef(lm2)[1])#format(unname(coef(lm2)[1]), digits = 2) # intercept
+        bp = unname(coef(lm2)[2])#format(unname(coef(lm2)[2]), digits = 2) # bx term
+        bp2 = unname(coef(lm2)[3])#format(unname(coef(lm2)[3]), digits = 2) # bx2 term
+        bp3 = unname(coef(lm2)[4])#format(unname(coef(lm2)[4]), digits = 2) # bx3 term
+        r2p = summary(lm2)$r.squared#format(summary(lm2)$r.squared, digits = 3) # r-squared
         
         ############## base R graph ##############################################
         # for plot.new() keep view on Plots tab, to avoid new window opening
@@ -301,7 +329,7 @@ for (i in seq(1, length(df_nums), 1)){
           geom_smooth(method=lm, formula=y~x, se=FALSE, color="blue")+
           geom_smooth(method=lm, formula=y~splines::bs(x,3), se=FALSE, color="red")+
           theme_classic()+
-          labs(x=names(df_nums[i]), y=names(df_nums[j]), title=paste("Plot of ",names(df_nums[i]), " by ", names(df_nums[j]), " || LR: ", "y=",b,"x+",a," r2=",r2, " || PY: ", "y=",bp,"x+",bp2,"x2+",bp3,"x3+",ap," r2=",r2p,sep=""))+
+          labs(x=names(df_nums[i]), y=names(df_nums[j]), title=paste("Plot of ",names(df_nums[i]), " by ", names(df_nums[j]), " || LR: ", "y=",number_format(b),"x+",number_format(a)," r2=",number_format(r2), " || PY: ", "y=",number_format(bp),"x+",number_format(bp2),"x2+",number_format(bp3),"x3+",number_format(ap)," r2=",number_format(r2p),"\n cor threshold: ",corr_threshold, "; actual corr: ",number_format(abs(corr_scor)),sep=""))+
           theme(plot.title = element_text(size=12))
         # save
         ggsave(paste(output_folder,"//",names(df_nums[i]),"\\",names(df_nums[i]),"_",names(df_nums[j]),"ggplot_both_plot.png",sep=""),width=30,height=15,units="cm", dpi=128)
