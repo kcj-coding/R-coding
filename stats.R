@@ -31,12 +31,22 @@ t.test(nums~type, data=df) # or use built-in function
 
 # sig and p-value mean what
 
+# p <= 0.05 = accept h1 reject h0
+
+# h0 is there is no difference between the types
+# h1 is there is a significant difference between the types
+
 ### correlation test
 
 cor1 <- cor.test(formula = ~ nums+nums_type, data=df)
 cor1 <- cor.test(x=df$nums, y=df$nums_type)
 
 # sig and p-value mean what
+
+# p <= 0.05 = accept h1 reject h0
+
+# h0 is there is no difference between the types
+# h1 is there is a significant difference between the types
 
 ################################################################################
 
@@ -47,6 +57,11 @@ chi1 <- chisq.test(x=table(df$type)) # category
 chi1 <- chisq.test(x=table(df$nums_type)) # or number as category
 
 # sig and p-value mean what
+
+# p <= 0.05 = accept h1 reject h0
+
+# h0 is there is no difference between the types
+# h1 is there is a significant difference between the types
 
 # 2-sample
 chi2 <- chisq.test(x=table(df$type,df$nums_type))
@@ -65,6 +80,11 @@ aov_sum <- summary(aov1)
 
 # post-hoc tests, Tukey HSD
 aov_tky <- TukeyHSD(aov1)
+
+# p <= 0.05 = accept h1 reject h0
+
+# h0 is there is no difference between the types
+# h1 is there is a significant difference between the types
 
 # lm - same formula as anova to look at coefficients
 lm1 <- lm(formula = nums ~ factor(type), data=df)
@@ -88,6 +108,9 @@ iqr_df <- data.frame(tapply(df$nums,df$type,IQR,na.rm=T))
 print(paste("mwu",med_df, iqr_df))
 
 # if p_value >= 0.05 no significant difference
+
+# h0 is there is no difference between the types
+# h1 is there is a significant difference between the types
 
 ################################################################################
 
