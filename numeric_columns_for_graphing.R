@@ -25,7 +25,10 @@ for (folder_location in folder_locations){
 }
 
 number_format <- function(num){
-  if (num > 0){
+  if (is.na(num)){
+    digits <- 0
+  }
+  else if (num > 0){
     digits <- floor(log10(num)) + 1
   }
   else if (num == 0){
@@ -39,13 +42,15 @@ number_format <- function(num){
     value <- formatC(num, format = "e", digits = 2)
     value <- sprintf("%.1e", num)
   }
-  else {
+  else if (digits <= 3 & !is.na(num)){
     value <- format(num, digits=2)
+  }
+  else {
+    value <- 0
   }
   return (value)
 }
-tst <- number_format(505.5678)
-tst1 <- number_format(0.000012345)
+
 data <- 1:10#c(1,2,3,4,5,6,7,8,9,10)
 typer <- rep(c("a","b"),times=5)#c("a","b","a","b","a","b","a","b","a","b")
 
@@ -57,10 +62,11 @@ varsum <- summary(df)#data.frame(sapply(df, function(x) c(summary(x))))#, type =
 write.csv(varsum, file = paste(folder,"\\",'varsum.csv',sep=""),row.names=FALSE)
 
 # get all non numeric columns
-df_chr <- df[sapply(df, class) != 'numeric']
+#df_chr <- df[sapply(df, class) != 'numeric']
+df_chr <- df[!sapply(df, is.numeric)]
 
 # if the length of df_chr > 0
-if (length(df_chr) > 0){
+if (ncol(df_chr) > 0){
 
   # fill any chr NA with 0
   chr.zero <- function(x) replace(x, is.na(x), "Unknown")
@@ -95,12 +101,12 @@ if (length(df_chr) > 0){
   #dfs = data.frame()
   #dfs <- data.frame(testcol=1:nrow(df_chr))
   d <- list()
-  for (i in seq(1, length(df_chr),1)){
+  for (i in seq(1, ncol(df_chr),1)){
     df_chk <- df_chr[,i]
     name1 <- names(df_chr[i])
     name2 <- paste(name1,"_fct",sep="")
     # get character and factor, and append to df
-    datad <- data.frame(dat=df_chk[[1]], fct=as.numeric(factor(df_chk[[1]])))
+    datad <- data.frame(dat=df_chk, fct=as.numeric(factor(df_chk)))
     
     # rename columns
     colnames(datad) <- c(name1,name2)
@@ -168,7 +174,7 @@ write.csv(d2,paste(folder,"\\","corr.csv",sep=""))
 
 # then plot individual numeric data, based on correlations
 
-for (i in seq(1, length(df_nums), 1)){
+for (i in seq(1, ncol(df_nums), 1)){
   
   # plot graphs of individual columns
   
@@ -278,14 +284,14 @@ for (i in seq(1, length(df_nums), 1)){
   
   #ggsave(paste(output_folder,names(df_nums[i]),"\\","column data","\\",names(df_nums[i]),"xtra_ggplot.png",sep=""), width=30, height=15, units="cm")
   
-  for (j in seq(1, length(df_nums), 1)){
+  for (j in seq(1, ncol(df_nums), 1)){
     # plot graphs of column against other columns if correlation is not na
     name1 <- as.character(names(df_nums[i]))
     name2 <- as.character(names(df_nums[j]))
     if (i != j){
       corr_scor <- d2[(d2$var2==name1 & d2$var1==name2),]
       corr_scor <- corr_scor$value[[1]]
-      if ((i != j & !is.na(corr_scor)) & (corr_threshold >= abs(corr_scor))){
+      if ((i != j & !is.na(corr_scor)) & (abs(corr_scor)) >= corr_threshold){
         ##########################################################################
         
         ############# linear equation examples for graph #########################
@@ -295,16 +301,16 @@ for (i in seq(1, length(df_nums), 1)){
         mod <- data.frame(vals=lm1$fitted.values, resid=lm1$residuals, actuals=df_nums[,j])
         
         # lm1 model #############################################
-        a = unname(coef(lm1)[1])#format(unname(coef(lm1)[1]), digits = 2) # intercept
-        b = unname(coef(lm1)[2])#format(unname(coef(lm1)[2]), digits = 2) # bx term
-        r2 = summary(lm1)$r.squared#format(summary(lm1)$r.squared, digits = 3) # r-squared
+        a = number_format(unname(coef(lm1)[1]))#format(unname(coef(lm1)[1]), digits = 2) # intercept
+        b = number_format(unname(coef(lm1)[2]))#format(unname(coef(lm1)[2]), digits = 2) # bx term
+        r2 = number_format(summary(lm1)$r.squared)#format(summary(lm1)$r.squared, digits = 3) # r-squared
         
         # lm2 model #############################################
-        ap = unname(coef(lm2)[1])#format(unname(coef(lm2)[1]), digits = 2) # intercept
-        bp = unname(coef(lm2)[2])#format(unname(coef(lm2)[2]), digits = 2) # bx term
-        bp2 = unname(coef(lm2)[3])#format(unname(coef(lm2)[3]), digits = 2) # bx2 term
-        bp3 = unname(coef(lm2)[4])#format(unname(coef(lm2)[4]), digits = 2) # bx3 term
-        r2p = summary(lm2)$r.squared#format(summary(lm2)$r.squared, digits = 3) # r-squared
+        ap = number_format(unname(coef(lm2)[1]))#format(unname(coef(lm2)[1]), digits = 2) # intercept
+        bp = number_format(unname(coef(lm2)[2]))#format(unname(coef(lm2)[2]), digits = 2) # bx term
+        bp2 = number_format(unname(coef(lm2)[3]))#format(unname(coef(lm2)[3]), digits = 2) # bx2 term
+        bp3 = number_format(unname(coef(lm2)[4]))#format(unname(coef(lm2)[4]), digits = 2) # bx3 term
+        r2p = number_format(summary(lm2)$r.squared)#format(summary(lm2)$r.squared, digits = 3) # r-squared
         
         ############## base R graph ##############################################
         # for plot.new() keep view on Plots tab, to avoid new window opening
@@ -313,7 +319,7 @@ for (i in seq(1, length(df_nums), 1)){
         
         # check if folder exists if not create it
         # check/create a folder
-        if (!file.exists(paste(output_folder,names(df_nums[i]),sep=""))){
+        if (!file.exists(paste(output_folder,"//",names(df_nums[i]),sep=""))){
           dir.create(paste(output_folder,"//",names(df_nums[i]),sep=""), recursive=TRUE) # recursive to also build any sub-folders
         }
         
@@ -329,10 +335,10 @@ for (i in seq(1, length(df_nums), 1)){
           geom_smooth(method=lm, formula=y~x, se=FALSE, color="blue")+
           geom_smooth(method=lm, formula=y~splines::bs(x,3), se=FALSE, color="red")+
           theme_classic()+
-          labs(x=names(df_nums[i]), y=names(df_nums[j]), title=paste("Plot of ",names(df_nums[i]), " by ", names(df_nums[j]), " || LR: ", "y=",number_format(b),"x+",number_format(a)," r2=",number_format(r2), " || PY: ", "y=",number_format(bp),"x+",number_format(bp2),"x2+",number_format(bp3),"x3+",number_format(ap)," r2=",number_format(r2p),"\n cor threshold: ",corr_threshold, "; actual corr: ",number_format(abs(corr_scor)),sep=""))+
+          labs(x=names(df_nums[i]), y=names(df_nums[j]), title=paste("Plot of ",names(df_nums[i]), " by ", names(df_nums[j]), " || LR: ", "y=",b,"x+",a," r2=",r2, " || PY: ", "y=",bp,"x+",bp2,"x2+",bp3,"x3+",ap," r2=",r2p,"\n cor threshold: ",corr_threshold, "; actual corr: ",number_format(abs(corr_scor)),sep=""))+
           theme(plot.title = element_text(size=12))
         # save
-        ggsave(paste(output_folder,"//",names(df_nums[i]),"\\",names(df_nums[i]),"_",names(df_nums[j]),"ggplot_both_plot.png",sep=""),width=30,height=15,units="cm", dpi=128)
+        ggsave(paste(output_folder,"//",names(df_nums[i]),"//",names(df_nums[i]),"_",names(df_nums[j]),"ggplot_both_plot.png",sep=""),width=30,height=15,units="cm", dpi=128)
         
         ########################## lm model residuals graph ######################
         
@@ -347,6 +353,25 @@ for (i in seq(1, length(df_nums), 1)){
         
         
         ##########################################################################
+        
+        ####################### boxplot of columns data #########################
+        dat_bp <- data.frame("val1"=df_nums[,i], "val2"=df_nums[,j])
+        colnames(dat_bp) <- c(names(df_nums[i]), names(df_nums[j]))
+        dat_bp <- dat_bp |> pivot_longer(everything(), values_to="Value", names_to="Variable")
+
+        ttt <- t.test(df_nums[,i],df_nums[,j])#, var.equal = TRUE, alternative = "two.sided")
+        #print(ttt)
+        ggplot(dat_bp, aes(x=Variable, y=Value))+
+          geom_boxplot()+
+          #geom_smooth(method=lm, formula=y~x, se=FALSE, color="blue")+
+          #geom_smooth(method=lm, formula=y~splines::bs(x,3), se=FALSE, color="red")+
+          theme_classic()+
+          labs(x="Variable", y="Value", title=paste("Plot of ",names(df_nums[i]), " by ", names(df_nums[j]),"\n t-test: ", ttt$statistic,"; p-value: ",ttt$p.value,sep=""))+
+          theme(plot.title = element_text(size=12))
+        # save
+        ggsave(paste(output_folder,"//",names(df_nums[i]),"//",names(df_nums[i]),"_",names(df_nums[j]),"_ggplot_boxplot.png",sep=""),width=30,height=15,units="cm", dpi=128)
+        
+        
         
         ####################### k-means clustering ###############################
         if(run_kmeans==TRUE){
@@ -379,7 +404,7 @@ for (i in seq(1, length(df_nums), 1)){
               labs(x=names(df_nums[i]), y=names(df_nums[j]), title=paste("Plot of ",names(df_nums[i]), " by ", names(df_nums[j]), sep=""))+
               theme(plot.title = element_text(size=12))
             # save
-            ggsave(paste(output_folder,"//",names(df_nums[i]),"\\",names(df_nums[i]),"_",names(df_nums[j]),"_cluster_ggplot_both_plot.png",sep=""),width=30,height=15,units="cm", dpi=128)
+            ggsave(paste(output_folder,"//",names(df_nums[i]),"//",names(df_nums[i]),"_",names(df_nums[j]),"_cluster_ggplot_both_plot.png",sep=""),width=30,height=15,units="cm", dpi=128)
           }, error = function(e) e)}
       }
     }
