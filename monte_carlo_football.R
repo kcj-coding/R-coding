@@ -196,5 +196,20 @@ dff_lng <- df_teams_f |> select(team, rank, pct) |> pivot_wider(names_from = ran
 #dff_lng <- dff_lng |> replace_na(0)
 dff_lng <- dff_lng[order(dff_lng$team),]
 
+df_teams_f1 <- df_teams_f
+
+df_teams_f1$team <- factor(df_teams_f1$team, levels = c(sort(unique(df_teams_f1$team), decreasing = TRUE)))
+
+# make heatmap
+ggplot(df_teams_f1, aes(x=rank, y=team, fill=pct))+
+  geom_tile()+
+  geom_text(aes(label=pct))+
+  scale_fill_gradient(low="yellow",high="red")+
+  labs(x="Rank", y="Team", title="Title")+
+  theme_classic()
+
+#save graph
+#ggsave(path="C:\\","file.png",height=15,width=30,units="cm")
+
 end_time <- Sys.time()
 print(paste("runtime: ", end_time-start_time, sep=""))
