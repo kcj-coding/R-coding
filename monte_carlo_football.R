@@ -93,7 +93,7 @@ for (run in 1:n_runs){
     }
     else if (result == "L"){
       a_score = sample(goals[2:7], size=1, replace=FALSE, prob=goals_prob[2:7])
-      h_score = max(0, a_score-sample(goals[1:6], size=1, replace=FALSE, prob=goals_prob[1:6]))
+      h_score = max(0, a_score-sample(goals[2:7], size=1, replace=FALSE, prob=goals_prob[2:7]))
       # team_w prob decreases
       # team_a prob increases
       team_probs1[h_loc] <- max(0.01,(1+loss_chg[1]) * team_probs[h_loc])
