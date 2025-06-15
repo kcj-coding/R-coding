@@ -123,7 +123,7 @@ if (ncol(df_chr) > 0){
   # remove all character columns from original df and add on these generated columns
   
   # Get all numeric columns
-  df <- df[sapply(df, class) == 'numeric']
+  #df <- df[sapply(df, class) == 'numeric']
   
   # join on created data
   df <- cbind(df, dfs)
@@ -188,6 +188,7 @@ for (i in seq(1, ncol(df_nums), 1)){
   mean <- mean(vv)
   mean_val <- mean(vv)
   sd <- sd(vv)
+  iqr1 <- IQR(vv)
   
   # get standard error (68%)
   sd_err <- sd(vv)
@@ -215,9 +216,15 @@ for (i in seq(1, ncol(df_nums), 1)){
   #dev.copy(png, paste(output_folder,names(df_nums[i]),"\\","column data","\\",names(df_nums[i]),"_hist.png",sep=""))
   #dev.off()
   
+  graph_title <- paste(names(df_nums[i])," mean: ",number_format(mean_val)," with ", pct_val_count_95, "% error lines",
+                       "\nn=",length(vv),"; sd=",round(sd_err,3),"; IQR=",round(IQR(vv),3),sep="")
+  
   # create boxplot - base R
   plot.new()
-  boxplot(vv, notch = TRUE, horizontal = TRUE, main=paste(names(df_nums[i])," mean: ",number_format(mean_val),sep=""))
+  boxplot(vv, notch = TRUE, horizontal = TRUE, main=graph_title)
+  abline(v=mean_val,lty=1,col="red")
+  abline(v=mean_val+sd_err_95,lty=2,col="red")
+  abline(v=mean_val-sd_err_95,lty=2,col="red")
   dev.copy(png, paste(output_folder,"//",names(df_nums[i]),"\\","column data","\\",names(df_nums[i]),"_boxplot.png",sep=""))
   dev.off()
   
@@ -230,8 +237,9 @@ for (i in seq(1, ncol(df_nums), 1)){
   
   # create probability density plot - base R
   plot.new()
-  hist(vv, freq=FALSE, col=4, main=paste(names(df_nums[i])," mean: ",number_format(mean_val)," with ", pct_val_count_95, "% error lines", sep=""))
+  hist(vv, freq=FALSE, col=4, main=graph_title)
   lines(density(vv), lwd=2)
+  abline(v=mean_val,lty=1,col="red")
   abline(v=mean_val+sd_err_95,lty=2,col="red")
   abline(v=mean_val-sd_err_95,lty=2,col="red")
   #lines(density(vv, adj=.5), lwd=1)
@@ -241,7 +249,7 @@ for (i in seq(1, ncol(df_nums), 1)){
   
   # create qq plot - base R
   plot.new()
-  qqnorm(vv, main=paste(names(df_nums[i])," mean: ",number_format(mean_val),sep=""))
+  qqnorm(vv, main=graph_title)
   qqline(vv, col=4)
   dev.copy(png, paste(output_folder,"//",names(df_nums[i]),"\\","column data","\\",names(df_nums[i]),"_qq.png",sep=""))
   dev.off()
@@ -420,5 +428,5 @@ print(paste("runtime: ",end_time-start_time,sep=""))
 files_del <- list.files(output_folder, pattern = "\\.png$", recursive = TRUE)
 
 for (folder_name in files_del){
-  unlink(paste(output_folder,folder_name,sep=""), recursive = TRUE)
+   unlink(paste(output_folder,folder_name,sep=""), recursive = TRUE)
 }

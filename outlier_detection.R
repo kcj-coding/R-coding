@@ -205,10 +205,12 @@ for (mdl in unq_mdl) {
   pct_val_count <- round((nrow(val_count)/nrow(df_hist))*100,3)
   pct_val_count_95 <- round((nrow(val_count_95)/nrow(df_hist))*100,3)
   
+  graph_title <- paste("Model ",mdl," mean: ",round(mean_val,3)," with ", pct_val_count_95, "% error lines",
+                       "\nn=",length(bootdist),"; sd=",round(sd_err,3),"; IQR=",round(IQR(df_hist$t.bootdist.),3),sep="")
+  
   # create histogram of this data - base R
   plot.new()
-  hist(bootdist, 'FD', col=4, main=paste("Model ",mdl," mean: ",round(mean_val,3)," with ", pct_val_count_95, "% error lines",
-                                         "\nn=",length(bootdist),"; sd=",round(sd_err,3),"; IQR=",round(IQR(df_hist$t.bootdist.),3),sep=""))
+  hist(bootdist, 'FD', col=4, main=graph_title)
   abline(v=(mean_val),lty=1,col="red")
   abline(v=(mean_val+sd_err_95),lty=2,col="red")
   abline(v=(mean_val-sd_err_95),lty=2,col="red")
@@ -217,8 +219,7 @@ for (mdl in unq_mdl) {
   
   # create boxplot - base R
   plot.new()
-  boxplot(bootdist, notch = TRUE, horizontal = TRUE, main=paste("Model ",mdl," mean: ",round(mean_val,3)," with ", pct_val_count_95, "% error lines",
-                                                                "\nn=",length(bootdist),"; sd=",round(sd_err,3),"; IQR=",round(IQR(df_hist$t.bootdist.),3),sep=""))
+  boxplot(bootdist, notch = TRUE, horizontal = TRUE, main=graph_title)
   
   dev.copy(png, paste(output_folder,"model_",mdl,"_boxplot.png",sep=""))
   dev.off()
@@ -226,8 +227,7 @@ for (mdl in unq_mdl) {
   # create boxplot - base R - 10% of observations
   ten_pct <- 0.1*length(bootdist)
   plot.new()
-  boxplot(bootdist[1:ten_pct], notch = TRUE, horizontal = TRUE, main=paste("Model ",mdl," mean: ",round(mean_val,3)," with ", pct_val_count_95, "% error lines",
-                                                                           "\nn=",length(bootdist),"; sd=",round(sd_err,3),"; IQR=",round(IQR(df_hist$t.bootdist.),3),sep=""))
+  boxplot(bootdist[1:ten_pct], notch = TRUE, horizontal = TRUE, main=graph_title)
   abline(v=(mean_val),lty=1,col="red")
   abline(v=(mean_val+sd_err_95),lty=2,col="red")
   abline(v=(mean_val-sd_err_95),lty=2,col="red")
@@ -236,8 +236,7 @@ for (mdl in unq_mdl) {
   
   # create probability density plot - base R
   plot.new()
-  hist(bootdist, freq=FALSE, col=4, main=paste("Model ",mdl," mean: ",round(mean_val,3)," with ", pct_val_count_95, "% error lines",
-                                               "\nn=",length(bootdist),"; sd=",round(sd_err,3),"; IQR=",round(IQR(df_hist$t.bootdist.),3),sep=""))
+  hist(bootdist, freq=FALSE, col=4, main=graph_title)
   lines(density(bootdist), lwd=2)
   lines(density(bootdist, adj=.5), lwd=1)
   lines(density(bootdist, adj=2), lwd=1.5)
@@ -249,16 +248,14 @@ for (mdl in unq_mdl) {
   
   # create qq plot - base R
   plot.new()
-  qqnorm(bootdist, main=paste("Model ",mdl," mean: ",round(mean_val,3)," with ", pct_val_count_95, "% error lines",
-                              "\nn=",length(bootdist),"; sd=",round(sd_err,3),"; IQR=",round(IQR(df_hist$t.bootdist.),3),sep=""))
+  qqnorm(bootdist, main=graph_title)
   qqline(bootdist, col=4)
   dev.copy(png, paste(output_folder,"model_",mdl,"_qq.png",sep=""))
   dev.off()
   
   # create log qq plot - base R
   plot.new()
-  qqnorm(log(bootdist), main=paste("Model ",mdl," mean: ",round(mean_val,3)," with ", pct_val_count_95, "% error lines",
-                                   "\nn=",length(bootdist),"; sd=",round(sd_err,3),"; IQR=",round(IQR(df_hist$t.bootdist.),3),sep=""))
+  qqnorm(log(bootdist), main=graph_title)
   qqline(log(bootdist), col=4)
   dev.copy(png, paste(output_folder,"model_",mdl,"_logqq.png",sep=""))
   dev.off()
@@ -266,8 +263,7 @@ for (mdl in unq_mdl) {
   # geom_scatter - ggplot
   ggplot(df_hist,aes(x=t.bootdist., y=t.bootdist.))+
     geom_point()+
-    labs(x="Preds",y="Frequency",title=paste("Model ",mdl," mean: ",round(mean_val,3)," with ", pct_val_count_95, "% error lines",
-                                             "\nn=",length(bootdist),"; sd=",round(sd_err,3),"; IQR=",round(IQR(df_hist$t.bootdist.),3),sep=""))+
+    labs(x="Preds",y="Frequency",title=graph_title)+
     theme_classic()
   
   ggsave(paste(output_folder,"model_",mdl,"scatter_ggplot.png",sep=""), width=30, height=15, units="cm")
@@ -278,8 +274,7 @@ for (mdl in unq_mdl) {
     geom_density()+
     geom_vline(xintercept=mean_val+sd_err_95,color="red")+ # sd error lines
     geom_vline(xintercept=mean_val-sd_err_95,color="red")+ # sd error lines
-    labs(x="Preds",y="Frequency",title=paste("Model ",mdl," mean: ",round(mean_val,3)," with ", pct_val_count_95, "% error lines",
-                                             "\nn=",length(bootdist),"; sd=",round(sd_err,3),"; IQR=",round(IQR(df_hist$t.bootdist.),3),sep=""))+
+    labs(x="Preds",y="Frequency",title=graph_title)+
     theme_classic()
   
   ggsave(paste(output_folder,"model_",mdl,"ggplot.png",sep=""), width=30, height=15, units="cm")
@@ -289,8 +284,7 @@ for (mdl in unq_mdl) {
     geom_density(bounds = c(1, Inf), color="black")+
     geom_vline(xintercept=mean_val+sd_err_95,color="red")+ # sd error lines
     geom_vline(xintercept=mean_val-sd_err_95,color="red")+ # sd error lines
-    labs(x="Preds",y="Frequency",title=paste("Model ",mdl," mean: ",round(mean_val,3)," with ", pct_val_count_95, "% error lines",
-                                             "\nn=",length(bootdist),"; sd=",round(sd_err,3),"; IQR=",round(IQR(df_hist$t.bootdist.),3),sep=""))+
+    labs(x="Preds",y="Frequency",title=graph_title)+
     theme_classic()
   
   ggsave(paste(output_folder,"model_",mdl,"xtra_ggplot.png",sep=""), width=30, height=15, units="cm")
