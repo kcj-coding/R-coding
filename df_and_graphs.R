@@ -89,7 +89,12 @@ colnames(df)[colnames(df) == "pct_v"] <- "pct_t"
 # query loop based on column name
 col_names <- c("col1")
 for (i in col_names){
-  mutate(!!i := as.numeric(!!as.name(i)))
+  
+  new_name <- paste(i,"_fct",sep="")
+  
+  df1 <- df |>
+  mutate(!!i := as.numeric(!!as.name(i)),
+         !!new_name := as.factor(!!as.name(i)))
 }
 
 # new column with previous values, lag for prv, lead for next
