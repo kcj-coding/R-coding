@@ -7,20 +7,6 @@ numbers <- "0123456789"
 
 text <- "The day 123, 456, !@."
 
-#t <- which(strsplit(numbers, "")[[1]]=="7")
-#tt <- strsplit(numbers,"")
-#ttt <- sapply(tt,"[[",t)
-
-# get a random number, check if already captured and only continue when not existing entry
-#num_chk <- TRUE
-#x <- 0
-#while (num_chk){
-#  x <- x+1
-#  # check num_chk
-#  num_chk <- x <= 5
-#}
-#x <- x
-
 # make functions
 phrase_generation <- function(user_text){
  phrase <- NULL # NULL or ""
@@ -66,6 +52,7 @@ phrase_generation_same_mappings <- function(user_text){
       letteri <- tolower(letter)
       if (letteri == "."){
         new <- letteri
+        xyz <- append(xyz, letteri)
         xtras <- append(xtras,new)
       } else {
       #print(paste("is . =",letteri,grepl(letteri,".")))
@@ -87,8 +74,33 @@ phrase_generation_same_mappings <- function(user_text){
       } else if (grepl(letter, "[!\"#$%&'()*+,-./:;<=>?@[\\]^_`{|}~]", perl=TRUE)){
         new <- letter
         xtras <- append(xtras, new)
-      } else if (grepl(letter, numbers, perl=TRUE)){
-        new <- floor(runif(1,min=0,max=9))
+      } 
+      # loop until find an unused number (eventually all 9 numbers will be used)
+      # get a random number, check if already captured and only continue when not existing entry
+      else if (grepl(letter, numbers, fixed=TRUE)){ # check if the entry is a number
+        
+        if (length(xtras)>0){
+          num_chk <- TRUE
+          while (num_chk){
+            #print("i")
+            new <- floor(runif(1,min=1, max=9))
+            #new <- letters[new_letter_num] # where no existing letter used
+            #print(grepl(new,xtras, perl=TRUE))
+            # check num_chk
+            
+            if (any(new==xtras)){
+              num_chk <- TRUE
+            } else {
+              num_chk <- FALSE
+            }}
+          } else {
+            new <- floor(runif(1,min=1, max=9))
+            #new <- letters[new_letter_num] # where no existing letter used
+          }
+        #xtras <- append(xtras, new)
+      #}
+        
+        new <- new#floor(runif(1,min=0,max=9))
         xtras <- append(xtras, new)
       } else if (grepl(letter, "\n", perl=TRUE)){
         new <- letter
