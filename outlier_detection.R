@@ -210,18 +210,26 @@ for (mdl in unq_mdl) {
   
   # create histogram of this data - base R
   plot.new()
-  hist(bootdist, 'FD', col=4, main=graph_title)
+  hist(bootdist, 'FD', col=4, main=graph_title, bty = "l")
   abline(v=(mean_val),lty=1,col="red")
   abline(v=(mean_val+sd_err_95),lty=2,col="red")
   abline(v=(mean_val-sd_err_95),lty=2,col="red")
-  dev.copy(png, paste(output_folder,"model_",mdl,"_hist.png",sep=""))
+  dev.copy(png, filename=paste(output_folder,"model_",mdl,"_hist.png",sep=""), width=30, height=15, units="cm", res=300)
   dev.off()
   
   # create boxplot - base R
   plot.new()
   boxplot(bootdist, notch = TRUE, horizontal = TRUE, main=graph_title)
+  dev.copy(png, filename=paste(output_folder,"model_",mdl,"_boxplot.png",sep=""), width=30, height=15, units="cm", res=300)
+  dev.off()
   
-  dev.copy(png, paste(output_folder,"model_",mdl,"_boxplot.png",sep=""))
+  # create dotchart - base R
+  plot.new()
+  dotchart(bootdist, main=graph_title)
+  abline(v=(mean_val),lty=1,col="red")
+  abline(v=(mean_val+sd_err_95),lty=2,col="red")
+  abline(v=(mean_val-sd_err_95),lty=2,col="red")
+  dev.copy(png, filename=paste(output_folder,"model_",mdl,"_dotplot.png",sep=""), width=30, height=15, units="cm", res=300)
   dev.off()
   
   # create boxplot - base R - 10% of observations
@@ -231,33 +239,33 @@ for (mdl in unq_mdl) {
   abline(v=(mean_val),lty=1,col="red")
   abline(v=(mean_val+sd_err_95),lty=2,col="red")
   abline(v=(mean_val-sd_err_95),lty=2,col="red")
-  dev.copy(png, paste(output_folder,"model_",mdl,"_10pc_boxplot.png",sep=""))
+  dev.copy(png, filename=paste(output_folder,"model_",mdl,"_10pc_boxplot.png",sep=""), width=30, height=15, units="cm", res=300)
   dev.off()
   
   # create probability density plot - base R
   plot.new()
-  hist(bootdist, freq=FALSE, col=4, main=graph_title)
+  hist(bootdist, freq=FALSE, col=4, main=graph_title, bty = "l")
   lines(density(bootdist), lwd=2)
   lines(density(bootdist, adj=.5), lwd=1)
   lines(density(bootdist, adj=2), lwd=1.5)
   abline(v=(mean_val),lty=1,col="red")
   abline(v=(mean_val+sd_err_95),lty=2,col="red")
   abline(v=(mean_val-sd_err_95),lty=2,col="red")
-  dev.copy(png, paste(output_folder,"model_",mdl,"_prob.png",sep=""))
+  dev.copy(png, filename=paste(output_folder,"model_",mdl,"_prob.png",sep=""), width=30, height=15, units="cm", res=300)
   dev.off()
   
   # create qq plot - base R
   plot.new()
-  qqnorm(bootdist, main=graph_title)
+  qqnorm(bootdist, main=graph_title, bty = "l")
   qqline(bootdist, col=4)
-  dev.copy(png, paste(output_folder,"model_",mdl,"_qq.png",sep=""))
+  dev.copy(png, filename=paste(output_folder,"model_",mdl,"_qq.png",sep=""), width=30, height=15, units="cm", res=300)
   dev.off()
   
   # create log qq plot - base R
   plot.new()
-  qqnorm(log(bootdist), main=graph_title)
+  qqnorm(log(bootdist), main=graph_title, bty = "l")
   qqline(log(bootdist), col=4)
-  dev.copy(png, paste(output_folder,"model_",mdl,"_logqq.png",sep=""))
+  dev.copy(png, filename=paste(output_folder,"model_",mdl,"_logqq.png",sep=""), width=30, height=15, units="cm", res=300)
   dev.off()
   
   # geom_scatter - ggplot

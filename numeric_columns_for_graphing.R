@@ -212,8 +212,8 @@ for (i in seq(1, ncol(df_nums), 1)){
   
   # create histogram of this data - base R
   #plot.new()
-  #hist(vv, 'FD', col=4, main=paste(names(df_nums[i])," mean: ",round(mean_val,3),sep=""))
-  #dev.copy(png, paste(output_folder,names(df_nums[i]),"\\","column data","\\",names(df_nums[i]),"_hist.png",sep=""))
+  #hist(vv, 'FD', col=4, main=paste(names(df_nums[i])," mean: ",round(mean_val,3),sep=""), bty = "l")
+  #dev.copy(png, filename=paste(output_folder,names(df_nums[i]),"\\","column data","\\",names(df_nums[i]),"_hist.png",sep=""), width=30, height=15, units="cm", res=144)
   #dev.off()
   
   graph_title <- paste(names(df_nums[i])," mean: ",number_format(mean_val)," with ", pct_val_count_95, "% error lines",
@@ -225,41 +225,50 @@ for (i in seq(1, ncol(df_nums), 1)){
   abline(v=mean_val,lty=1,col="red")
   abline(v=mean_val+sd_err_95,lty=2,col="red")
   abline(v=mean_val-sd_err_95,lty=2,col="red")
-  dev.copy(png, paste(output_folder,"//",names(df_nums[i]),"\\","column data","\\",names(df_nums[i]),"_boxplot.png",sep=""))
+  dev.copy(png, filename=paste(output_folder,"//",names(df_nums[i]),"\\","column data","\\",names(df_nums[i]),"_boxplot.png",sep=""), width=30, height=15, units="cm", res=300)
   dev.off()
   
   # create boxplot - base R - 10% of observations
   #ten_pct <- 0.1*length(df_nums[i])
   #plot.new()
   #boxplot(vv[1:ten_pct], notch = TRUE, horizontal = TRUE, main=paste("Model "," mean: ",round(mean_val,3),sep=""))
-  #dev.copy(png, paste(output_folder,names(df_nums[i]),"\\","column data","\\",names(df_nums[i]),"_10pc_boxplot.png",sep=""))
+  #dev.copy(png, filename=paste(output_folder,names(df_nums[i]),"\\","column data","\\",names(df_nums[i]),"_10pc_boxplot.png",sep=""), width=30, height=15, units="cm", res=144)
   #dev.off()
+  
+  # create dotplot - base R
+  plot.new()
+  dotchart(vv, main=graph_title)
+  abline(v=(mean_val),lty=1,col="red")
+  abline(v=(mean_val+sd_err_95),lty=2,col="red")
+  abline(v=(mean_val-sd_err_95),lty=2,col="red")
+  dev.copy(png, filename=paste(output_folder,"//",names(df_nums[i]),"\\","column data","\\",names(df_nums[i]),"_dotplot.png",sep=""), width=30, height=15, units="cm", res=300)
+  dev.off()
   
   # create probability density plot - base R
   plot.new()
-  hist(vv, freq=FALSE, col=4, main=graph_title)
+  hist(vv, freq=FALSE, col=4, main=graph_title, bty = "l")
   lines(density(vv), lwd=2)
   abline(v=mean_val,lty=1,col="red")
   abline(v=mean_val+sd_err_95,lty=2,col="red")
   abline(v=mean_val-sd_err_95,lty=2,col="red")
   #lines(density(vv, adj=.5), lwd=1)
   #lines(density(vv, adj=2), lwd=1.5)
-  dev.copy(png, paste(output_folder,"//",names(df_nums[i]),"\\","column data","\\",names(df_nums[i]),"_prob.png",sep=""))
+  dev.copy(png, filename=paste(output_folder,"//",names(df_nums[i]),"\\","column data","\\",names(df_nums[i]),"_prob.png",sep=""), width=30, height=15, units="cm", res=300)
   dev.off()
   
   # create qq plot - base R
   plot.new()
-  qqnorm(vv, main=graph_title)
+  qqnorm(vv, main=graph_title, bty = "l")
   qqline(vv, col=4)
-  dev.copy(png, paste(output_folder,"//",names(df_nums[i]),"\\","column data","\\",names(df_nums[i]),"_qq.png",sep=""))
+  dev.copy(png, filename=paste(output_folder,"//",names(df_nums[i]),"\\","column data","\\",names(df_nums[i]),"_qq.png",sep=""), width=30, height=15, units="cm", res=300)
   dev.off()
   
   #tryCatch({
   # create log qq plot - base R
   #plot.new()
-  #qqnorm(log(vv), main=paste("Model "," mean: ",round(mean_val,3),sep=""))
+  #qqnorm(log(vv), main=paste("Model "," mean: ",round(mean_val,3),sep=""), bty = "l")
   #qqline(log(vv), col=4)
-  #dev.copy(png, paste(output_folder,names(df_nums[i]),"\\","column data","\\",names(df_nums[i]),"_logqq.png",sep=""))
+  #dev.copy(png, filename=paste(output_folder,names(df_nums[i]),"\\","column data","\\",names(df_nums[i]),"_logqq.png",sep=""), width=30, height=15, units="cm", res=300)
   #dev.off()
   #}, error = function(e) e)
   
