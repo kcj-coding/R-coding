@@ -103,7 +103,7 @@ forecast <- function(runs,data,data1,days,threshold,type){
        xlab="Day", ylab=paste(type," ",tag,sep=""),
        main=paste(type," ",tag," with shaded uncertainty bands","\n","Runs=",runs," Threshold=",threshold,sep=""),bty="l")
   
-  # 999% band (widest)
+  # 99.9% band (widest)
   polygon(
     c(1:days, rev(1:days)),
     c(pi999[1,], rev(pi999[2,])),
@@ -145,6 +145,14 @@ forecast <- function(runs,data,data1,days,threshold,type){
   lines(1:days, mean_line, lwd=1.5, col="black")
   
   abline(h=threshold, col="red", lwd=2, lty=2)
+  
+  leg_cols <- c("#42f5e3","#42e3f5","#34b7eb","#3483eb","#343aeb")
+  leg_sym <- c(16, 16, 16,16,16)
+  leg_lab <- c("99.9%", "99%", "95%","80%","50%")
+  
+  legend(x = 1, y = max(data), col = leg_cols, pch = leg_sym, 
+         legend = leg_lab, bty = "n", 
+         title = "Legend")
   
   return(data)
 }
