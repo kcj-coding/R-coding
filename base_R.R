@@ -176,8 +176,9 @@ dev.copy(png, filename=paste(output_folder,"//","_boxplot.png",sep=""), width=30
 dev.off()
 
 # create scatterplot like dotchart - base R
+ff <- mapply(jitter,vv)
 plot.new()
-plot(vv, pch=19, cex=1, col=color.gradient(df$jit), xlab="", ylab="", main=graph_title, bty = "l")
+plot(ff, pch=19, cex=1, col=color.gradient(ff), xlab="", ylab="", main=graph_title, bty = "l")
 abline(h=(mean_val),lty=1,col="red")
 abline(h=(mean_val+sd_err_95),lty=2,col="red")
 abline(h=(mean_val-sd_err_95),lty=2,col="red")
@@ -185,8 +186,9 @@ dev.copy(png, filename=paste(output_folder,"//","_scatter_like_dotchart.png",sep
 dev.off()
 
 # create scatterplot like dotchart - base R
+ff <- mapply(jitter,vv)
 plot.new()
-plot(x=vv,y=1:length(vv), pch=19, cex=1, col=color.gradient(df$jit), xlab="", ylab="", main=graph_title, bty = "l")
+plot(x=ff,y=1:length(vv), pch=19, cex=1, col=color.gradient(ff), xlab="", ylab="", main=graph_title, bty = "l")
 abline(v=(mean_val),lty=1,col="red")
 abline(v=(mean_val+sd_err_95),lty=2,col="red")
 abline(v=(mean_val-sd_err_95),lty=2,col="red")
