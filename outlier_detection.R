@@ -133,6 +133,20 @@ for (i in 1:nrow(df_r)){
 
 bs_df <- do.call(rbind, bs_res)
 
+jitter <- function(values1){
+  value <- 0.01*(max(values1)-min(values1))
+  value1 <- values1 + (runif(n=1, min=1, max=length(values1))*value)
+  return(value1)
+}
+
+# base r colour gradient - function from https://stackoverflow.com/questions/13353213/gradient-of-n-colors-ranging-from-color-1-and-color-2
+color.gradient <- function(x, colors=c("purple", "yellow", "red"), 
+                           colsteps=100) {
+  return(colorRampPalette(colors)(colsteps)[
+    findInterval(x, seq(min(x,na.rm = TRUE), max(x, na.rm = TRUE), length.out=colsteps))
+  ])
+}
+
 # graph these models
 ggplot(bs_df, aes(x=xval,y=preds, group=model))+
   geom_line(color=bs_df$model)+
@@ -221,6 +235,26 @@ for (mdl in unq_mdl) {
   plot.new()
   boxplot(bootdist, notch = TRUE, horizontal = TRUE, main=graph_title)
   dev.copy(png, filename=paste(output_folder,"model_",mdl,"_boxplot.png",sep=""), width=30, height=15, units="cm", res=300)
+  dev.off()
+  
+  # create scatterplot like dotchart - base R
+  ff <- mapply(jitter,bootdist)
+  plot.new()
+  plot(ff, pch=19, cex=1, col=color.gradient(ff), xlab="", ylab="", main=graph_title, bty = "l")
+  abline(h=(mean_val),lty=1,col="red")
+  abline(h=(mean_val+sd_err_95),lty=2,col="red")
+  abline(h=(mean_val-sd_err_95),lty=2,col="red")
+  dev.copy(png, filename=paste(output_folder,"model_",mdl,"_scatter_like_dotchart.png",sep=""), width=30, height=15, units="cm", res=300)
+  dev.off()
+  
+  # create scatterplot like dotchart - base R
+  ff <- mapply(jitter,bootdist)
+  plot.new()
+  plot(x=ff, y=1:length(ff), pch=19, cex=1, col=color.gradient(ff), xlab="", ylab="", main=graph_title, bty = "l")
+  abline(v=(mean_val),lty=1,col="red")
+  abline(v=(mean_val+sd_err_95),lty=2,col="red")
+  abline(v=(mean_val-sd_err_95),lty=2,col="red")
+  dev.copy(png, filename=paste(output_folder,"model_",mdl,"_scatter_like_dotchart1.png",sep=""), width=30, height=15, units="cm", res=300)
   dev.off()
   
   # create dotchart - base R

@@ -234,14 +234,49 @@ for (i in seq(1, ncol(df_nums), 1)){
   #boxplot(vv[1:ten_pct], notch = TRUE, horizontal = TRUE, main=paste("Model "," mean: ",round(mean_val,3),sep=""))
   #dev.copy(png, filename=paste(output_folder,names(df_nums[i]),"\\","column data","\\",names(df_nums[i]),"_10pc_boxplot.png",sep=""), width=30, height=15, units="cm", res=144)
   #dev.off()
+  ##############################################################################
+  # scatter plot like dotchart
+  jitter <- function(values1){
+    value <- 0.01*(max(values1)-min(values1))
+    value1 <- values1 + (runif(n=1, min=1, max=length(values1))*value)
+    return(value1)
+  }
   
+  # base r colour gradient - function from https://stackoverflow.com/questions/13353213/gradient-of-n-colors-ranging-from-color-1-and-color-2
+  color.gradient <- function(x, colors=c("purple", "yellow", "red"), 
+                             colsteps=100) {
+    return(colorRampPalette(colors)(colsteps)[
+      findInterval(x, seq(min(x,na.rm = TRUE), max(x, na.rm = TRUE), length.out=colsteps))
+    ])
+  }
+  
+  # create scatterplot like dotchart - base R
+  ff <- mapply(jitter,vv)
+  plot.new()
+  plot(ff, pch=19, cex=1, col=color.gradient(ff), xlab="", ylab="", main=graph_title, bty = "l")
+  abline(h=(mean_val),lty=1,col="red")
+  abline(h=(mean_val+sd_err_95),lty=2,col="red")
+  abline(h=(mean_val-sd_err_95),lty=2,col="red")
+  dev.copy(png, filename=paste(output_folder,"//",names(df_nums[i]),"\\","column data","\\",names(df_nums[i]),"scatter_like__dotchart.png",sep=""), width=30, height=15, units="cm", res=300)
+  dev.off()
+  
+  # create scatterplot like dotchart - base R
+  ff <- mapply(jitter,vv)
+  plot.new()
+  plot(x=ff, y=1:length(ff), pch=19, cex=1, col=color.gradient(ff), xlab="", ylab="", main=graph_title, bty = "l")
+  abline(v=(mean_val),lty=1,col="red")
+  abline(v=(mean_val+sd_err_95),lty=2,col="red")
+  abline(v=(mean_val-sd_err_95),lty=2,col="red")
+  dev.copy(png, filename=paste(output_folder,"//",names(df_nums[i]),"\\","column data","\\",names(df_nums[i]),"scatter_like__dotchart1.png",sep=""), width=30, height=15, units="cm", res=300)
+  dev.off()
+################################################################################  
   # create dotplot - base R
   plot.new()
   dotchart(vv, main=graph_title)
   abline(v=(mean_val),lty=1,col="red")
   abline(v=(mean_val+sd_err_95),lty=2,col="red")
   abline(v=(mean_val-sd_err_95),lty=2,col="red")
-  dev.copy(png, filename=paste(output_folder,"//",names(df_nums[i]),"\\","column data","\\",names(df_nums[i]),"_dotplot.png",sep=""), width=30, height=15, units="cm", res=300)
+  dev.copy(png, filename=paste(output_folder,"//",names(df_nums[i]),"\\","column data","\\",names(df_nums[i]),"_dotchart.png",sep=""), width=30, height=15, units="cm", res=300)
   dev.off()
   
   # create probability density plot - base R
