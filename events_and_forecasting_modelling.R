@@ -4,7 +4,7 @@ start_time <- Sys.time()
 ################################################################################
 
 iterations <- 500 # number of simulations to run
-days <- 10 # number of days to forecast into the future
+days <- 5 # number of days to forecast into the future
 threshold <- 5 # number of events to not exceed
 tag <- "Events"
 
@@ -17,6 +17,16 @@ historical <- c(4,3,5,6,2,4,5,7,8,3,2,4,5,6) # historical events e.g per day
 
 ################################################################################
 
+new_sample <- sample(historical, days, replace = TRUE)
+avg_new <- mean(new_sample)
+r_pois <- rpois(days,avg_new) # variation from randomness can make higher numbers than in original set
+
+# e.g. get highest number from new set and sd from the avg_new
+max_num <- as.numeric(max(r_pois))
+sd_rng <- (max_num-avg_new)/sd(new_sample) # Z score formula
+
+################################################################################
+
 mean_val <- mean(historical) # mean numbers of tickets
 sd_val <- ifelse(length(historical)>1,sd(historical),1) # standard deviation in ticket numbers
 
@@ -24,7 +34,7 @@ sd_val <- ifelse(length(historical)>1,sd(historical),1) # standard deviation in 
 
 distribution <- function(runs,mean_val,sd_val,type){
   if (type == "Normal"){
-    sim <- rnorm(iterations, mean=mean_val, sd=sd_val)
+    sim <- rnorm(n=iterations, mean=mean_val, sd=sd_val)
   } else if (type == "Poisson"){
     sim <- rpois(n=iterations, lambda=mean_val)
   }
@@ -50,23 +60,27 @@ distribution <- function(runs,mean_val,sd_val,type){
        xlab=paste("Number of ",tag,sep=""),bty="l")
   lines(density(sim), lwd=2)
   abline(v=exp, col="red", lwd=2, lty=2)
+  
+  return(sim)
 }
 
 ###### distributions ###########################################################
 
-distribution(iterations,mean_val,sd_val,"Normal")
-distribution(iterations,mean_val,sd_val,"Poisson")
+norm <- distribution(iterations,mean_val,sd_val,"Normal")
+poisson <- distribution(iterations,mean_val,sd_val,"Poisson")
 
 ################################################################################
 
 # forecasting
 
 forecast <- function(runs,data,data1,days,threshold,type){
+  xyz <- NULL
   for (i in 1:runs) {
-    lambda_day <- sample(data1, days, replace = TRUE)
-    decay <- runif(days, min = 0.01, max = 0.05) # percentage that lambda value can change by day, min to max bounds
-    lambda_adj <- lambda_day * (1 - decay)
-    data[, i] <- rpois(days, lambda_adj) # replace values with poisson distribution of new mean lambda_adj
+    lambda_day <- poisson # sample(data1, days, replace = TRUE) # can rerun or take already made values
+    decay <- runif(days, min = 0.01, max = 1.25) # percentage that lambda value can change by day, min to max bounds
+    lambda_adj <- ifelse(decay<1,lambda_day * (1 - decay),lambda_day*decay) # increase or decrease amount
+    xyz <- append(xyz,lambda_adj)
+    data[, i] <- rpois(n=days, lambda=lambda_adj) # insert or replace values with poisson distribution of new mean lambda_adj
   }
   
   if(type=="Cumulative"){
@@ -145,16 +159,22 @@ forecast <- function(runs,data,data1,days,threshold,type){
   lines(1:days, mean_line, lwd=1.5, col="black")
   
   abline(h=threshold, col="red", lwd=2, lty=2)
+  if(type=="Daily"){
+    abline(h=round(max(xyz)), col="blue", lwd=2, lty=2)
+    abline(h=round((mean(xyz)+(6*sd(xyz))),0), col="green", lwd=2, lty=2)
+    abline(h=(mean(xyz)+(8*sqrt(mean(xyz))))*0.99, col="orange", lwd=2, lty=2)
+    abline(h=max(data), col="yellow", lwd=2, lty=2)
+  }
   
   leg_cols <- c("#42f5e3","#42e3f5","#34b7eb","#3483eb","#343aeb")
   leg_sym <- c(16, 16, 16,16,16)
   leg_lab <- c("99.9%", "99%", "95%","80%","50%")
   
   legend(x = 1, y = max(data), col = leg_cols, pch = leg_sym, 
-         legend = leg_lab, bty = "n", 
+         legend = leg_lab, bty = "l", # can also be "n"
          title = "Legend")
   
-  return(data)
+  return(list(data=data,xyz=xyz))
 }
 
 ############ forecastings ######################################################
@@ -162,8 +182,26 @@ forecast <- function(runs,data,data1,days,threshold,type){
 sim_matrix <- matrix(NA, nrow = days, ncol = iterations)
 
 matrix1 <- forecast(iterations,sim_matrix,historical,days,threshold,"Daily")
+xyz <- matrix1$xyz
+max(xyz) # maximum old lambda (avg) value used
+matrix1 <- matrix1$data # get average of matrix by doing xyz
+avg <- mean(matrix1)
+sd <- sd(matrix1)
+max(matrix1) # because the max above gets put into rpois as a new lambda, the generated values can be a standard deviation (+1.5) higher e.g. 8.7 * max=1.25 = 10.375, rpois(10.875) = 16
 
-matrix2 <- forecast(iterations,sim_matrix,historical,days,threshold,"Cumulative")
+# Z = (num-avg)/(sd) therefore sd = (num-avg)/(Z) and (num-avg) = Z/sd and num = (Z/sd)+avg
+# max(matrix1) = (Z/sd)+avg
+Z <- (max(matrix1)-max(xyz))/sd
+
+# but for rpois sd is then square root of the mmean so
+sd1 <- sqrt(avg)
+Z1 <-  (max(matrix1)-max(xyz))/sd1
+
+# create a value calculator that shows possible values +/- to get the max and standad devaition to achieve it
+# e.g. 500 possible values that achieve this average and this standard deviation
+
+
+matrix2 <- forecast(iterations,sim_matrix,historical,days,threshold,"Cumulative")[[1]]
 
 
 ################################################################################
