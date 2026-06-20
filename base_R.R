@@ -1,9 +1,11 @@
 
+# copy this to other r code as jitter native function in base r
+
 gc()
 start_time <- Sys.time()
 
-folder <- r"[C:\Users\kelvi\Desktop\xyz]"
-output_folder <- r"[C:\Users\kelvi\Desktop\xyz\Graphs]"
+folder <- r"[C:\Users\janan\Desktop\xyz]"
+output_folder <- r"[C:\Users\janan\Desktop\xyz\Graphs]"
 
 folder_locations <- c(folder, output_folder)
 
@@ -45,8 +47,8 @@ number_format <- function(num){
 
 ##################################################
 
-data <- 1:10#c(1,2,3,4,5,6,7,8,9,10)
-typer <- rep(c("a","b"),times=5)#c("a","b","a","b","a","b","a","b","a","b")
+data <- runif(n=100,min=1,max=10) #,6,7,8,9,10)
+typer <- rep(c("a","b"),times=50) #"a","b","a","b","a","b","a","b","a","b")
 
 # make a dataframe
 df <- data.frame(data=data, type=typer)
@@ -81,6 +83,12 @@ df2 <- lapply(df1, sum)
 
 dfxx <- data.frame(groups=names(df1), values=sapply(df1,sum))
 
+# can also group by and add to new df e.g.
+dfx1 <- dfx
+colnames(dfx1) <- c("letters","Num")
+df_join <- merge(df,dfx1,by=c("letters"), all.x = TRUE)
+df_join <- merge(df,dfx1,by.x="letters",by.y="letters")
+
 ##################################################
 
 
@@ -106,6 +114,8 @@ df_chr <- df[!sapply(df, is.numeric)]
 text <- "abc def ghi jkl"
 txt <- sub("^([^\\s]+\\s+){3}([^\\s]+).*", "\\2", text, perl=TRUE)
 
+##########################
+
 filename <- "C:\\Folder\\abc def 05-06-2026.txt"
 # get date from filename
 dater <- gsub("[a-zA-Z\\\\_\\.\\:\\s]","",filename,perl=TRUE)
@@ -113,17 +123,77 @@ dater <- gsub("[a-zA-Z\\\\_\\.\\:\\s]","",filename,perl=TRUE)
 nodater <- gsub("[0-9]","",filename,perl=TRUE)
 #nodater <- gsub("(?<=\\.).*(?=\\.txt)","",filename,perl=TRUE)
 
+########################
+
+# or str_extract like without stringr
+pattern <- "(?<=\\s)[0-9\\-].*(?=\\.)"
+match_pattern <- gregexpr(pattern,filename,ignore.case=TRUE,perl=TRUE,fixed=FALSE)
+dater1 <- regmatches(filename,match_pattern)[[1]]
+
+# or mapply to dataframe to get matches e.g. df <- 
+filter_df <- mapply(regmatches,df$text)
+#filtered_df <- filtered_df[match_positions function(m){m !=-1},]
+
+filtered_df <- sapply(match_positions, function(m)any(m !=-1))
+
+filtered_df <- df[sapply(match_positions, function(x) x[1] != -1), ]
+
+##################################################
+
+# read xml file
+xml <- "C:\\Windows\\WinSxS\\migration.xml"
+xml_file <- read.delim(xml, header=FALSE, sep="\t") 
+colnames(xml_file) <- "text"
+
+# extract
+xml_pattern <- '<file>(.*?)</file>'
+xml_matches <- gregexpr(xml_pattern,xml_file$text,ignore.case=TRUE,perl=TRUE,fixed=FALSE) # this gives start position of match as int and the match length as int
+xml1 <- regmatches(xml_file$text,xml_matches)
+
+# or as one big string piece to get count of words
+xml2 <- as.character(paste(xml1, collapse=" "))
+xml2 <- gsub("[^\\sa-zA-Z0-9]", " ", xml2, perl=TRUE)
+# count of words
+words <- strsplit(xml2, "\\s")
+words1 <- unique(words)
+
+ttt <- data.frame(text=words,num=1)
+namer <- colnames(ttt)[1]
+colnames(ttt)[colnames(ttt)==namer] <- "text"
+colnames(ttt) <- c("text","num")
+ttt$text <- as.character(ttt$text)
+ttt <- aggregate(ttt$num~ttt$text, FUN=sum)
+colnames(ttt) <- c("text","num")
+ttt <- ttt[order(ttt$num, decreasing=TRUE),]
+ttt <- ttt[ttt$text != "",]
+
+
 ##################################################
 
 # jitter function - to make similar view to dotchart
-jitter <- function(values1){
-  value <- 0.01*(max(values1)-min(values1))
-  value1 <- values1 + (runif(n=1, min=1, max=length(values1))*value)
-  return(value1)
+relative_jitter <- function(x){
+  # if length is 0 return x
+  if(length(x) == 0)
+    return(x)
+  
+  # check if is numeric
+  if(!is.numeric(x))
+    stop("'x' must be numeric")
+  
+  # get range of values of x
+  z <- max(x)-min(x)
+  
+  # get range of values to highest power of 10
+  d <- unique(round(x,3-floor(log10(z))))/10
+  
+  amount <- 1/5*abs(d)
+  
+  x1 <- abs(x + stats::runif(n=length(x), min=-amount, max=amount))
+  #return (x1)
 }
 
 # apply to df
-df$jit <- mapply(jitter,df$numbers)
+df$jit <- mapply(relative_jitter,df$numbers)
 
 ##################################################
 
@@ -176,7 +246,7 @@ dev.copy(png, filename=paste(output_folder,"//","_boxplot.png",sep=""), width=30
 dev.off()
 
 # create scatterplot like dotchart - base R
-ff <- mapply(jitter,vv)
+ff <- mapply(relative_jitter,vv)
 plot.new()
 plot(ff, pch=19, cex=1, col=color.gradient(ff), xlab="", ylab="", main=graph_title, bty = "l")
 abline(h=(mean_val),lty=1,col="red")
@@ -186,7 +256,7 @@ dev.copy(png, filename=paste(output_folder,"//","_scatter_like_dotchart.png",sep
 dev.off()
 
 # create scatterplot like dotchart - base R
-ff <- mapply(jitter,vv)
+ff <- mapply(relative_jitter,vv)
 plot.new()
 plot(x=ff,y=1:length(vv), pch=19, cex=1, col=color.gradient(ff), xlab="", ylab="", main=graph_title, bty = "l")
 abline(v=(mean_val),lty=1,col="red")

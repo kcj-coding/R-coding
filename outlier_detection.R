@@ -133,10 +133,25 @@ for (i in 1:nrow(df_r)){
 
 bs_df <- do.call(rbind, bs_res)
 
-jitter <- function(values1){
-  value <- 0.01*(max(values1)-min(values1))
-  value1 <- values1 + (runif(n=1, min=1, max=length(values1))*value)
-  return(value1)
+relative_jitter <- function(x){
+  # if length is 0 return x
+  if(length(x) == 0)
+    return(x)
+  
+  # check if is numeric
+  if(!is.numeric(x))
+    stop("'x' must be numeric")
+  
+  # get range of values of x
+  z <- max(x)-min(x)
+  
+  # get range of values to highest power of 10
+  d <- unique(round(x,3-floor(log10(z))))/10
+  
+  amount <- 1/5*abs(d)
+  
+  x1 <- abs(x + stats::runif(n=length(x), min=-amount, max=amount))
+  #return (x1)
 }
 
 # base r colour gradient - function from https://stackoverflow.com/questions/13353213/gradient-of-n-colors-ranging-from-color-1-and-color-2
@@ -238,7 +253,7 @@ for (mdl in unq_mdl) {
   dev.off()
   
   # create scatterplot like dotchart - base R
-  ff <- mapply(jitter,bootdist)
+  ff <- mapply(relative_jitter,bootdist)
   plot.new()
   plot(ff, pch=19, cex=1, col=color.gradient(ff), xlab="", ylab="", main=graph_title, bty = "l")
   abline(h=(mean_val),lty=1,col="red")
@@ -248,7 +263,7 @@ for (mdl in unq_mdl) {
   dev.off()
   
   # create scatterplot like dotchart - base R
-  ff <- mapply(jitter,bootdist)
+  ff <- mapply(relative_jitter,bootdist)
   plot.new()
   plot(x=ff, y=1:length(ff), pch=19, cex=1, col=color.gradient(ff), xlab="", ylab="", main=graph_title, bty = "l")
   abline(v=(mean_val),lty=1,col="red")
