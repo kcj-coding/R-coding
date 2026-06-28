@@ -1,11 +1,9 @@
 
-# copy this to other r code as jitter native function in base r
-
 gc()
 start_time <- Sys.time()
 
-folder <- r"[C:\Users\janan\Desktop\xyz]"
-output_folder <- r"[C:\Users\janan\Desktop\xyz\Graphs]"
+folder <- r"[C:\Users\kelvi\Desktop\xyz]"
+output_folder <- r"[C:\Users\kelvi\Desktop\xyz\Graphs]"
 
 folder_locations <- c(folder, output_folder)
 
@@ -134,9 +132,9 @@ dater1 <- regmatches(filename,match_pattern)[[1]]
 filter_df <- mapply(regmatches,df$text)
 #filtered_df <- filtered_df[match_positions function(m){m !=-1},]
 
-filtered_df <- sapply(match_positions, function(m)any(m !=-1))
+filtered_df <- sapply(match_pattern, function(m)any(m !=-1))
 
-filtered_df <- df[sapply(match_positions, function(x) x[1] != -1), ]
+filtered_df <- df[sapply(match_pattern, function(x) x[1] != -1), ]
 
 ##################################################
 
@@ -292,6 +290,119 @@ qqnorm(vv, main=graph_title, bty = "l")
 qqline(vv, col=4)
 dev.copy(png, filename=paste(output_folder,"//","_qq.png",sep=""), width=30, height=15, units="cm", res=300)
 dev.off()
+
+##################################################
+
+# create heatmap
+df_a <- df[df$letters=="a",]
+df_b <- df[df$letters=="b",]
+
+# get numbers and letters, cbind
+df_a <- df_a[c("numbers","letters")]
+df_b <- df_b[c("numbers","letters")]
+
+df_ab <- cbind(df_a,df_b)
+colnames(df_ab) <- c("numbers_a","letters_a","numbers_b","letters_b")
+
+# get percentage each contributes to total as ratio
+df_ab$pct <- abs((df_ab$numbers_a-df_ab$numbers_b)/10)
+df_ab$pick <- ifelse(df_ab$numbers_a>df_ab$numbers_b,"a","b")
+df_ab$contrib <- ifelse(df_ab$numbers_a>df_ab$numbers_b,10-df_ab$numbers_a,10-df_ab$numbers_b) # distance from 10 (max number)
+df_ab$n <- 1:nrow(df_ab)
+
+# group by contrib
+df_abx <- aggregate(contrib~pick, data=df_ab, FUN=sum) 
+df_abx$pct <- round(df_abx$contrib/sum(df_abx$contrib),2)
+df_abx$contrib_txt <- 1:nrow(df_abx)
+
+# make heatmap function
+
+heatmapper <- function(x_vals,y_vals,text_vals,xlab,ylab,title){
+  
+  # Get unique labels for the x and y axes
+  x_labels <- sort(unique(x_vals))
+  y_labels <- sort(unique(y_vals))
+  
+  # Initialise empty matrices for values and text labels
+  mat_values <- matrix(NA, nrow = length(x_labels), ncol = length(y_labels),
+                       dimnames = list(x_labels, y_labels))
+  mat_text   <- matrix(NA, nrow = length(x_labels), ncol = length(y_labels),
+                       dimnames = list(x_labels, y_labels))
+  
+  # Populate matrices using a loop
+  for(i in 1:nrow(df_heatmap)) {
+    r_idx <- as.character(x_vals[i])
+    c_idx <- as.character(y_vals[i])
+    mat_values[r_idx, c_idx] <- x_vals[i]
+    mat_text[r_idx, c_idx]   <- as.numeric(text_vals[i])
+  }
+  
+  # Adjust plot margins to ensure names fit on the left side
+  par(mar = c(5, 7, 4, 2))
+  
+  # Define a color palette (e.g., shades of blue)
+  color_palette <- hcl.colors(12, "Blues", rev = FALSE)
+  
+  # Draw the heatmap background using the 'number' matrix
+  image(
+    x = 1:length(x_labels),
+    y = 1:length(y_labels),
+    z = t(mat_values),
+    xaxt = "n",             # Suppress default X-axis
+    yaxt = "n",             # Suppress default Y-axis
+    xlab = xlab,
+    ylab = ylab,
+    main = title,
+    bty="l",
+    col = "white"#color_palette
+  )
+  
+  # Draw the background grid squares using the custom percentage-based color matrix
+  
+  num_colors <- 100
+  color_palette <- heat.colors(num_colors, rev=TRUE)
+  
+  color_index_matrix <- matrix(
+    as.numeric(cut(mat_text, breaks = num_colors, labels = FALSE)), 
+    nrow = nrow(mat_text)
+  )
+  
+  # Add custom axis labels
+  axis(1, at = 1:length(x_labels), labels = x_labels)
+  axis(2, at = 1:length(y_labels), labels = y_labels, las = 2)
+  
+  # Overlay the independent percentage text onto the cells
+  for(x in 1:length(x_labels)) {
+    for(y in 1:length(y_labels)) {
+      
+      
+      # Extract the pre-calculated global color index for this specific cell
+      col_idx <- color_index_matrix[x, y]
+      
+      # If the index is not NA, color the background tile
+      if(!is.na(col_idx)) {
+        rect(
+          xleft   = x - 0.5, ybottom = y - 0.5, 
+          xright  = x + 0.5, ytop    = y + 0.5, 
+          col     = color_palette[col_idx], 
+          border  = "white"
+        )
+      }
+      
+      text_val <- as.character(mat_text[x, y])
+      # Only print text if a data point exists in that cell
+      if (!is.na(text_val) && text_val != "") {
+        text(x, y, labels = text_val, col = "black", font = 2)
+      }
+    }
+  }
+  
+}
+
+# base r heatmap example
+df_heatmap <- df_abx
+heatmapper(df_heatmap$contrib_txt,df_heatmap$pick,df_heatmap$pct,"Rank","Team","Title")
+
 
 ##################################################
 
