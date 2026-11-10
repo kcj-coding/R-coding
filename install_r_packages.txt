@@ -1,3 +1,18 @@
+# on linux run the below
+sudo apt update
+sudo apt install -y \
+  libcurl4-openssl-dev \
+  libssl-dev \
+  libxml2-dev \
+  libfontconfig1-dev \
+  libharfbuzz-dev \
+  libfribidi-dev \
+  libfreetype6-dev \
+  libpng-dev \
+  libtiff5-dev \
+  libjpeg-dev \
+  libpq-dev
+
 # install non core/base packages
 
 install.packages(c("dplyr","fpp3","ggplot2","ggrepel","keras","maps","NbClust","officer","pdftools","sf","stringr","summarytools","tibble","tidymodels","tidyr","tidytext","tidyverse","tm","vip"))
